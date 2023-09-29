@@ -5,7 +5,20 @@
 
 这些工具都不是我制作的，本仓库仅储存。集合文件[在这里](https://github.com/Little-Data/Gametoolkit/releases)
 
+**常用资源**
+
+- [PSP工具包](https://github.com/Little-Data/Gametoolkit/releases/tag/V1.0)
+- [通用工具包](https://github.com/Little-Data/Gametoolkit/releases/tag/V2.0)
+- [swf解包工具](https://github.com/Little-Data/Gametoolkit/releases/tag/V4.0)
+
 **更新日志**
+
+2023.09.29
+
+增加`.swf`文件解包工具
+
+- hugflash
+- jpexs-decompiler
 
 2023.08.28
 
