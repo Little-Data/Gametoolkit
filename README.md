@@ -12,6 +12,7 @@
 - [PSP工具包](https://github.com/Little-Data/Gametoolkit/releases/tag/V1.0)
 - [通用工具包](https://github.com/Little-Data/Gametoolkit/releases/tag/V2.0)
 - [swf解包工具](https://github.com/Little-Data/Gametoolkit/releases/tag/V4.0)
+- [音质优化](https://github.com/Little-Data/Gametoolkit/releases/tag/V3.1)
 
 **更新日志**
 
