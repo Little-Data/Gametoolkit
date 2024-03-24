@@ -5,6 +5,16 @@
 
 这些工具都不是我制作的，本仓库仅储存。集合文件[在这里](https://github.com/Little-Data/Gametoolkit/releases)
 
+> **帮助保存文件！Help with saving files!**
+> 
+> 这些资源在互联网上很稀有，有一些被贩卖获取利润。These resources are rare on the Internet, and some are trafficked for profit.
+> 
+> 这违背了互联网的分享精神。It goes against the spirit of sharing on the internet.
+> 
+> 同时Github的仓库具有不稳定性，不知道什么时候会消失。Also Github repositories are volatile and there is no telling when they will disappear.
+>
+> 请保存文件，同时不要拿去贩卖。Please save the files and at the same time do not take it for sale.
+
 **常用资源**
 
 **Frequently used resources**
