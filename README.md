@@ -16,6 +16,10 @@
 
 **更新日志**
 
+2024.03.24
+
+- BloodRayne Toolset (BR2PodTools)
+
 2023.09.29
 
 增加`.swf`文件解包工具
