@@ -25,7 +25,21 @@
 - [swf解包工具](https://github.com/Little-Data/Gametoolkit/releases/tag/V4.0)
 - [音质优化](https://github.com/Little-Data/Gametoolkit/releases/tag/V3.1)
 
+**其它资源**
+
+**Other resources**
+
+- [RPA Extract](https://iwanplays.itch.io/rpaex)
+  
+  从 RenPy 游戏的 .rpa 文件中提取图像的工具
+  
+  Tool to extract images from RenPy games' .rpa files
+
 **更新日志**
+
+2024.05.26
+
+- ExtractData V1.2
 
 2024.03.24
 
