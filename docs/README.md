@@ -1,6 +1,6 @@
 # Gametoolkit
 
-![](/Gametoolkit/img2/192.png)
+![](/img2/192.png)
 
 **I didn't make any of these tools, just saved the [files](https://github.com/Little-Data/Gametoolkit/releases)**
 
