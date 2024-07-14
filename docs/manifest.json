@@ -1,0 +1,40 @@
+{
+  "name": "Gametoolkit",
+  "short_name": "Gametoolkit",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#fff",
+  "description": "Collection of game unpacking tools",
+  "icons": [
+    {
+      "src": "img2/48.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "img2/72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "img2/96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "img2/144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "img2/168.png",
+      "sizes": "168x168",
+      "type": "image/png"
+    },
+    {
+      "src": "img2/192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}

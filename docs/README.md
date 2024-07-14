@@ -1,12 +1,11 @@
 # Gametoolkit
 
-![](/docs/img2/192.png)
+![](/Gametoolkit/img2/192.png)
 
 **I didn't make any of these tools, just saved the [files](https://github.com/Little-Data/Gametoolkit/releases)**
 
 这些工具都不是我制作的，本仓库仅储存。集合文件[在这里](https://github.com/Little-Data/Gametoolkit/releases)
 
->[!important]
 > **帮助保存文件！Help with saving files!**
 > 
 > 这些资源在互联网上很稀有，有一些被贩卖获取利润。These resources are rare on the Internet, and some are trafficked for profit.
@@ -36,5 +35,63 @@
   
   Tool to extract images from RenPy games' .rpa files
 
->[!important]
-> 本仓库已有[文档页](https://little-data.github.io/Gametoolkit)，转到文档页查看更多
+**更新日志**
+
+2024.07.14
+
+- 增加文档页面
+- 添加来自[阿斯特罗乔布斯-哔哩哔哩](https://space.bilibili.com/210298091)的文件
+
+2024.05.26
+
+- ExtractData V1.2
+
+2024.03.24
+
+- BloodRayne Toolset (BR2PodTools)
+- PP Extractor
+
+2023.09.29
+
+增加`.swf`文件解包工具
+
+- hugflash
+- jpexs-decompiler
+
+2023.08.28
+
+增加一个音频转换工具，弥补DKZ Studio转换后音质下降的问题
+
+- LoopingAudioConverter
+
+2023.08.12
+
+增加了超多工具，支持更多游戏解包：
+
+- UE Viewer
+- riox
+- luozhuangalmaPacker
+- AnimED
+- asmodean tools
+- atuworksPacker
+- AXLluozhuangResource
+- exafa
+- al2010cv
+- BGIunpack_0.1.1
+- ARC4Packer
+
+and more....
+
+2023.07.22
+
+更新常用的通用解包工具：
+
+- AssetStudio
+- GARbro
+- crass
+- magic extractor
+- arc_conv
+
+2023.01.05
+
+第一版，PSP处理工具
