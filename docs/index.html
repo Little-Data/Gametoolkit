@@ -8,14 +8,10 @@
   <meta name="description" content="Collection of game unpacking tools">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
   <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
-  <link rel="manifest" href="/Gametoolkit/manifest.json" />
 </head>
 <body>
   <div id="app">Loading...</div>
   <script>
-  if (typeof navigator.serviceWorker !== 'undefined') {
-    navigator.serviceWorker.register('sw.js')
-  }
     window.$docsify = {
       name: 'Gametoolkit',
       repo: 'https://github.com/Little-Data/Gametoolkit',
@@ -31,7 +27,12 @@
       '/',
       '/wiki/3ds_game_unpacking_tool',
 	  '/wiki/All_tool_instructions',
-	  '/wiki/DKZStudio'
+	  '/wiki/DKZStudio',
+	  '/wiki/awb格式音频',
+	  '/wiki/some_bats',
+	  '/wiki/Summary_of_Computer_File_Attributes',
+	  '/wiki/pmftools',
+	  '/wiki/Umd_Stream_Composer'
     ],
 	editButton: {
 	title: "在Github上编辑",
@@ -55,5 +56,7 @@
   <script src="//unpkg.com/docsify-count/dist/countable.js"></script>
   <script src="//cdn.jsdelivr.net/npm/docsify-copy-code/dist/docsify-copy-code.min.js"></script>
   <script src="//cdn.jsdelivr.net/npm/docsify-edit-btn"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs/components/prism-bash.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs/components/prism-batch.min.js"></script>
 </body>
 </html>

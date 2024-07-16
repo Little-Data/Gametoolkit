@@ -35,7 +35,7 @@
   
   Tool to extract images from RenPy games' .rpa files
 
-**更新日志**
+**更新日志（仅记录新增文件，文档更新不记录）**
 
 2024.07.14
 
