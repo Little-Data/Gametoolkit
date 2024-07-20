@@ -9,3 +9,6 @@
   * [awb格式音频](/wiki/awb格式音频.md)
   * [pmftools](/wiki/pmftools.md)
   * [Umd Stream Composer](/wiki/Umd_Stream_Composer.md)
+* 收集的一些文档 Document Collections
+  * PSX介绍中文版
+    * [中央处理器（CPU）R3000A](/doc/PSX_introduces_CN/中央处理器（CPU）R3000A.md)
