@@ -12,3 +12,5 @@
 * 收集的一些文档 Document Collections
   * PSX介绍中文版
     * [中央处理器（CPU）R3000A](/doc/PSX_introduces_CN/中央处理器（CPU）R3000A.md)
+    * [内存](/doc/PSX_introduces_CN/内存.md)
+    * [图形处理芯片](/doc/PSX_introduces_CN/图形处理芯片（GPU）.md)
