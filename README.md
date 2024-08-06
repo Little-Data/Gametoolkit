@@ -7,6 +7,9 @@
 这些工具都不是我制作的，本仓库仅储存。集合文件[在这里](https://github.com/Little-Data/Gametoolkit/releases)
 
 >[!important]
+> 本仓库已有[文档页](https://wiki.little-data.eu.org/Gametoolkit)，转到文档页查看更多
+
+>[!important]
 > **帮助保存文件！Help with saving files!**
 > 
 > 这些资源在互联网上很稀有，有一些被贩卖获取利润。These resources are rare on the Internet, and some are trafficked for profit.
@@ -35,6 +38,3 @@
   从 RenPy 游戏的 .rpa 文件中提取图像的工具
   
   Tool to extract images from RenPy games' .rpa files
-
->[!important]
-> 本仓库已有[文档页](https://little-data.github.io/Gametoolkit)，转到文档页查看更多
