@@ -8,6 +8,12 @@
 
 >[!important]
 > 本仓库已有[文档页](https://wiki.little-data.eu.org/Gametoolkit)，转到文档页查看更多
+>
+> This repository already has a [documentation page](https://wiki.little-data.eu.org/Gametoolkit), go to the documentation page to see more
+>
+> 如果在寻找一些处理脚本，请移步文档页。
+>
+> If you are looking for some processing scripts, please go to the documentation page.
 
 >[!important]
 > **帮助保存文件！Help with saving files!**
