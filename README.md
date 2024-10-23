@@ -6,6 +6,8 @@
 
 这些工具都不是我制作的，本仓库仅储存。集合文件[在这里](https://github.com/Little-Data/Gametoolkit/releases)
 
+无法下载？试试[加速镜像下载](https://wiki.little-data.eu.org/#github%E4%B8%8B%E8%BD%BD%E5%8A%A0%E9%80%9F)
+
 >[!important]
 > 本仓库已有[文档页](https://wiki.little-data.eu.org/Gametoolkit)，转到文档页查看更多
 >
