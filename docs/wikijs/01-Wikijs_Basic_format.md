@@ -194,8 +194,6 @@ Consectetur [adipiscing](/install/requirements) elit
 
 [Lorem ipsum](https://wiki.js.org/about)
 
-Consectetur [adipiscing](/install/requirements) elit
-
 ### 带样式
 
 ```
