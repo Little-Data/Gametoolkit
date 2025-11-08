@@ -1,0 +1,148 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<title>基础计数器</title>
+</head>
+
+<body>
+
+<h1><font color="#FF0000">基础计数器</font></h1>
+<p>基础计数器是PSX的定时器，它有4个计数器。</p>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>计数器
+    <td>基本地址
+    <td>同步到
+  <tr>
+    <td>0
+    <td>0x1F80_1100
+    <td>象素时钟
+  <tr>
+    <td>1
+    <td>0x1F80_1110
+    <td>水平回折
+  <tr>
+    <td>2
+    <td>0x1F80_1120
+    <td>1/8系统时钟
+  <tr>
+    <td>3
+    <td>　
+    <td>垂直回折
+</table>
+<p>每个计数器都有3个寄存器，一个是当前值，一个是计数器模式，一个是目标值。</p>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="2">0x11n0&nbsp;&nbsp; 
+      计数&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 读
+  <tr>
+    <td>31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 16
+    <td>15&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+      0
+  <tr>
+    <td>垃圾
+    <td>当前计数值,0x0000-0xFFFF
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="10">0x11n4&nbsp; 
+      模式&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 读/写
+  <tr>
+    <td>31&nbsp; 10
+    <td>9
+    <td>8
+    <td>7
+    <td>6
+    <td>5
+    <td>4
+    <td>3
+    <td>2&nbsp;&nbsp; 1
+    <td>0
+  <tr>
+    <td>垃圾
+    <td>Div
+    <td>Clc
+    <td>　
+    <td>Iq2
+    <td>　
+    <td>Iq1
+    <td>Tar
+    <td>　
+    <td>En
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>En
+    <td>0 计数器运行中<br>
+      1 计数器停止（只用于计数器2）
+  <tr>
+    <td>Tar
+    <td>0 计数到0xFFFF<br>
+      1 计数到目标寄存器的数值
+  <tr>
+    <td>Iq1<br>
+      Iq2
+    <td>达到目标值时设置IRQ
+  <tr>
+    <td>Clc
+    <td>0 系统时钟<br>
+      1 象素时钟（计数器0）<br>
+      &nbsp; 水平回折（计数器1）
+  <tr>
+    <td>Div
+    <td>0 系统时钟<br>
+      1 1/8系统时钟（计数器2）
+</table>
+<p>当计数器的Clc和Div是0的时候，他们以相同的速度运行，速度似乎是计数器2的8倍。第10－31位似乎只有垃圾。
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="2">0x11n8&nbsp; 目标数&nbsp;&nbsp;&nbsp;&nbsp; 读/写
+  <tr>
+    <td>31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 16
+    <td>15&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+      0
+  <tr>
+    <td>垃圾
+    <td>目标值,0x0000-0xFFFF
+</table>
+<p>要使用这些计数器设置一个中断，进行如下操作：
+<table border="1" cellspacing="0">
+  <tr>
+    <td>1
+    <td>复位计数器（Mode＝0）
+  <tr>
+    <td>2
+    <td>设置目标值，设置模式
+  <tr>
+    <td>3
+    <td>在中断掩码寄存器（0x1F801074）中使能对应的位<br>
+      位3＝计数器3（Vblank）<br>
+      位4＝计数器0（系统时钟）<br>
+      位5＝计数器1（Hblank）<br>
+      位6＝计数器2（象素）
+  <tr>
+    <td>4
+    <td>打开一个事件（打开事件BIOS调用－0xB0,0x08），等待一下参数：<br>
+      A0－对应的计数器事件描述器或计数器号码<br>
+      &nbsp;&nbsp;&nbsp; （0xF2000000－计数器0，0xF2000001－计数器1，0xF2000002－计数器2，0xF2000003－计数器3）<br>
+      A1－Spec＝0x0002－中断事件。<br>
+      A2－Mode＝中断句柄（0x1000）<br>
+      A3－指向用户例程，返回值V0是事件标识符。
+  <tr>
+    <td>5
+    <td>用对应的以标识符为参数的BISOCALL（0xB0,0x0C）使能事件。
+  <tr>
+    <td>6
+    <td>确定中断被使能（COP0状态寄存器的0和10位必须被设置）。
+</table>
+<p>用户应该恢复使用的寄存器，应该用正常的jr ra终止。
+<p>要关闭中断，先调用禁止事件（0xB0,0x0D），然后用以事件号为参数的关闭事件调用（0xB0,0x09）关闭它。
+
+</body>
+
+</html>

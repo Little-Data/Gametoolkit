@@ -1,0 +1,782 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<title>CD</title>
+</head>
+
+<body>
+
+<h1><font color="#FF0000">CD－ROM</font></h1>
+<p>PSX使用一个特殊的倍速CD－ROM，最大速率是352K/秒，它使用下面这些寄存器来控制。
+<table border="1" cellspacing="0">
+  <tr>
+    <td>CDREG0
+    <td>0x1F80_1800
+  <tr>
+    <td>CDREG1
+    <td>0x1F80_1801
+  <tr>
+    <td>CDREG2
+    <td>0x1F80_1802
+  <tr>
+    <td>CDREG3
+    <td>0x1F80_1803
+</table>
+<h5>寄存器格式</h5>
+<table border="1" cellspacing="0">
+  <tr>
+    <td rowspan="2">CDREG0
+    <td>写
+    <td>0 发送命令<br>     
+      1 读取结果     
+  <tr>
+    <td>读
+    <td>IO状态<br>
+      0位 0 REG1发送命令<br>     
+      &nbsp;&nbsp;&nbsp; 1 REG2读取结果<br>     
+      1位 0 数据传输结束<br>     
+      &nbsp;&nbsp;&nbsp; 1 数据传输忙/进行中<br>     
+      7位 1 命令处理中     
+  <tr>
+    <td rowspan="2">CDREG1
+    <td>写
+    <td>命令
+  <tr>
+    <td>读
+    <td>结果
+  <tr>
+    <td rowspan="2">CDREG2
+    <td>写
+    <td>发送参数
+  <tr>
+    <td>写
+    <td>7＝清空参数缓存
+  <tr>
+    <td rowspan="2">CDREG3
+    <td>写
+    <td>7＝清空IRQ
+  <tr>
+    <td>读
+    <td>高位：未知<br>
+      地位：中断状态
+</table>
+<h5>模式设置
+</h5>
+<table border="1" cellspacing="0">
+  <tr>
+    <td rowspan="2">模式
+    <td rowspan="2">位
+    <td>功能
+  <tr>
+    <td>0
+    <td>1
+  <tr>
+    <td>M_Speed
+    <td>7
+    <td>正常速度
+    <td>倍速
+  <tr>
+    <td>M_Strsnd
+    <td>6
+    <td>ADPCM关
+    <td>ADPCM开
+  <tr>
+    <td>M_Size
+    <td>5
+    <td>2048字节
+    <td>2340字节
+  <tr>
+    <td>M_Size2
+    <td>4
+    <td>－
+    <td>2328字节
+  <tr>
+    <td>M_SF
+    <td>3
+    <td>通道关
+    <td>通道开
+  <tr>
+    <td>M_Report
+    <td>2
+    <td>报告关
+    <td>报告开
+  <tr>
+    <td>M_AutoPause
+    <td>1
+    <td>自动暂停关
+    <td>自动暂停开
+  <tr>
+    <td>M_CDDA
+    <td>0
+    <td>CD－DA关
+    <td>CD－DA开
+</table>
+<p>可以通过设置模式命令来设置模式。下面是从CD命令接收到的状态位：
+<h5>状态位</h5>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>Play
+    <td>位7
+    <td>播放CD－DA
+  <tr>
+    <td>Seek
+    <td>位6
+    <td>寻道
+  <tr>
+    <td>Read
+    <td>位5
+    <td>读取数据扇区
+  <tr>
+    <td>ShellOpen
+    <td>位4
+    <td>壳门打开一次
+  <tr>
+    <td>SeekError
+    <td>位3
+    <td>检测到寻道错误
+  <tr>
+    <td>Standby
+    <td>位2
+    <td>转轴马达旋转
+  <tr>
+    <td>Error
+    <td>位1
+    <td>检测到命令错误
+</table>
+<h5>中断</h5>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>NoIntr
+    <td>0x00
+    <td>没有中断
+  <tr>
+    <td>DataReady
+    <td>0x01
+    <td>数据准备好
+  <tr>
+    <td>Acknowledge
+    <td>0x02
+    <td>命令完成
+  <tr>
+    <td>Complete
+    <td>0x03
+    <td>应答
+  <tr>
+    <td>DataEnd
+    <td>0x04
+    <td>检测到数据结束
+  <tr>
+    <td>DiskError
+    <td>0x05
+    <td>检测到错误
+</table>
+<p>这些是CDREG3返回的低位。读取CDREG3前先向CDREG0写1。当一个命令完成，它返回3。在处理完IRQ后，向CDREG写1，然后向CDREG2和CDREG3些7作为应答。其他的中断可能在排队，所以应该检查CDREG3是0，或者有其他中断等待处理。
+<p>　
+<h5>命令</h5>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>
+      名称
+    <td>
+      命令
+    <td>
+      需等待的
+    <td>
+      参数
+    <td>
+      返回
+  <tr>
+    <td>
+      Sync
+    <td>
+      0x00
+    <td>
+      &nbsp;
+      
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      Nop
+    <td>
+      0x01
+    <td>
+      &nbsp;
+      
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      Setloc
+    <td>
+      0x02
+    <td>
+      &nbsp;
+    <td>
+      min,sec,sector
+    <td>
+      状态
+  <tr>
+    <td>
+      Play
+    <td>
+      0x03
+    <td>
+      B
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      Forward
+    <td>
+      0x04
+    <td>
+      B
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      Backward
+    <td>
+      0x05
+    <td>
+      B
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      ReadN
+    <td>
+      0x06
+    <td>
+      B
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      Standby
+    <td>
+      0x07
+    <td>
+      B
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      Stop
+    <td>
+      0x08
+    <td>
+      B
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      Pause
+    <td>
+      0x09
+    <td>
+      B
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      Init
+    <td>
+      0x0a
+    <td>
+      &nbsp;
+      
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      Mute
+    <td>
+      0x0b
+    <td>
+      &nbsp;
+      
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      Demute
+    <td>
+      0x0c
+    <td>
+      &nbsp;
+      
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      Setfilter
+    <td>
+      0x0d
+    <td>
+      &nbsp;
+      
+    <td>
+      file,channel
+    <td>
+      状态
+  <tr>
+    <td>
+      Setmode
+    <td>
+      0x0e
+    <td>
+      &nbsp;
+      
+    <td>
+      mode
+    <td>
+      状态
+  <tr>
+    <td>
+      Getparam
+    <td>
+      0x0f
+    <td>
+      &nbsp;
+      
+    <td>
+      -
+    <td>
+      状态，模式，文件？，通道？，？，？
+  <tr>
+    <td>
+      GetlocL
+    <td>
+      0x10
+    <td>
+      &nbsp;
+      
+    <td>
+      -
+    <td>
+      分，秒，扇区，模式，文件，通道
+  <tr>
+    <td>
+      GetlocP
+    <td>
+      0x11
+    <td>
+      &nbsp;
+      
+    <td>
+      -
+    <td>
+      轨道，索引，分，秒，帧,amin,      
+      asec,aframe
+  <tr>
+    <td>
+      GetTN
+    <td>
+      0x13
+    <td>
+      &nbsp;
+      
+    <td>
+      -
+    <td>
+      状态，第一，全部(BCD)
+  <tr>
+    <td>
+      GetTD
+    <td>
+      0x14
+    <td>
+      &nbsp;
+      
+    <td>
+      rack(BCD)
+    <td>
+      状态，分，秒(BCD)
+  <tr>
+    <td>
+      SeekL
+    <td>
+      0x15
+    <td>
+      B
+    <td>
+      *
+    <td>
+      状态（命令目标用Setloc设置）
+  <tr>
+    <td>
+      SeekP
+    <td>
+      0x16
+    <td>
+      B
+    <td>
+      *
+    <td>
+      状态（命令目标用Setloc设置）
+  <tr>
+    <td>
+      Test
+    <td>
+      0x19
+    <td>
+      B
+    <td>
+      #
+    <td>
+      依赖于参数（事实是另一个命令集的入口）
+  <tr>
+    <td>
+      ID
+    <td>
+      0x1A
+    <td>
+      B
+    <td>
+      -
+    <td>
+      成功，标志1，标志2，00      
+      4个字母ID(SCEx)
+  <tr>
+    <td>
+      ReadS
+    <td>
+      0x1B
+    <td>
+      B
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      Reset
+    <td>
+      0x1C
+    <td>
+      &nbsp;
+      
+    <td>
+      -
+    <td>
+      状态
+  <tr>
+    <td>
+      ReadTOC
+    <td>
+      0x1E
+    <td>
+      B
+    <td>
+      -
+    <td>
+      状态
+</table>
+<p>
+
+B表示阻塞，这些命令立即返回一个结果表明命令开始了，但是必须等待IRQ去获取真正的结果。
+<p>
+
+<h5>命令描述</h5>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>
+      命令序号
+    <td>
+      命令名称
+    <td>
+      描述
+  <tr>
+    <td>
+      0x00
+    <td>
+      Sync
+    <td>
+      <p>其他命令都完成了此命令才成功，用来同步。
+  <tr>
+    <td>
+      0x01
+    <td>
+      Nop
+    <td>
+      <p>什么也不做，用来返回状态
+  <tr>
+    <td>
+      0x02
+    <td>
+      Setloc
+    <td>
+      <p>用这个命令和它的参数，设置参数列表带*号的命令的目标
+  <tr>
+    <td>
+      0x03
+    <td>
+      Play
+    <td>
+      <p>从最后寻道点播放音频扇区，几乎和CdlReadS一样，主要的不同是这个命令没有触发一个读取完成IRQ.CdlPlay可以用于数据扇区，但是，所有数据轨的扇区都被当作00，所以没有声音。当CdlPlay被读，音频数据出现在扇区缓存中，但是是不可信的。有些游戏的增强CD用这个来进行PSX版权保护
+  <tr>
+    <td>
+      0x04
+    <td>
+      Forward
+    <td>
+      <p>寻道下一轨
+  <tr>
+    <td>
+      0x05
+    <td>
+      Backward
+    <td>
+      <p>寻道当前轨开始，或者前一轨（如果处于当前轨刚开始的地方，和CD播放器的按钮一样）
+  <tr>
+    <td>
+      0x06
+    <td>
+      ReadN
+    <td>
+      <p>带重试读取。如果ModeRept打开了，每个扇区引发一个IRQ（类型1）。如果尝试读取非PSX    
+      CD或者音频CD（没有mod芯片），ReadN和ReadS会引发错误。
+  <tr>
+    <td>
+      0x07
+    <td>
+      Standby
+    <td>
+      <p>CD-ROM放弃所有读取和播放，但是继续旋转，CD－ROM不保持当前位置。
+  <tr>
+    <td>
+      0x08
+    <td>
+      Stop
+    <td>
+      <p>停止马达，标准的重启方法是0A，但是几乎所有命令都重启它。
+  <tr>
+    <td>
+      0x09
+    <td>
+      Pause
+    <td>
+      <p>想Standby，但是会保持当前位置。
+  <tr>
+    <td>
+      0x0A
+    <td>
+      Init
+    <td>
+      <p>一次执行多种效果。 Setmode = 00，Standby，放弃所有命令   
+  <tr>
+    <td>
+      0x0B
+    <td>
+      Mute
+    <td>
+      <p>关闭到SPU的CDDA流。
+  <tr>
+    <td>
+      0x0C
+    <td>
+      Demute
+    <td>
+      <p>打开到SPU的CDDA流。
+  <tr>
+    <td>
+      0x0D
+    <td>
+      Setfilter
+    <td>
+      <p>自动ADPCM(CD-ROM XA)过滤器忽略副头部区域中不同通道和文件（参数）的扇区。这个是在单个XA中包含多首歌时的选歌方法。Setfilter不会影响实际的读取（所有扇区都被读取）。   
+  <tr>
+    <td>
+      0x0E
+    <td>
+      Setmode
+    <td>
+      <p>设置参数，例如读取模式，旋转速度等。
+  <tr>
+    <td>
+      0x0F
+    <td>
+      Getparam
+    <td>
+      <p>返回状态，模式，文件，通道，？，？
+  <tr>
+    <td>
+      0x10
+    <td>
+      GetlocL
+    <td>
+      <p>返回最后读取扇区（头部）的前6（8？）个字节。用来知道扇区来源，但是通常在2340字节读取模式中没有意义。所有的结果都是BCD码（0x12表示12，而不是18），命令可以和读取或者播放同时执行（GetlocL立刻返回结果）。
+  <tr>
+    <td>
+      0x11
+    <td>
+      GetlocP
+    <td>
+      <p>返回最后读取扇区的12字节sub－Q数据的8个。和GetlocL的目的相同，但是更强大，返回BCD码。见注释。
+  <tr>
+    <td>
+      0x13
+    <td>
+      GetTN
+    <td>
+      <p>取TOC中第一个轨道号码和轨道总数。
+  <tr>
+    <td>
+      0x14
+    <td>
+      GetTD
+    <td>
+      <p>取指定轨道的开始（返回扇区？）
+  <tr>
+    <td>
+      0x15
+    <td>
+      SeekL
+    <td>
+      <p>在数据模式寻道到Setloc的位置，只能寻道数据扇区，精确到扇区。
+  <tr>
+    <td>
+      0x16
+    <td>
+      SeekP
+    <td>
+      <p>在音频模式寻道到Setloc的位置，可以寻道任何扇区，但只精确到秒。
+  <tr>
+    <td>
+      0x19
+    <td>
+      Test
+    <td>
+      <p>这个命令有很多完全不同的子命令，见注释末尾。
+</table>
+
+<p>　
+
+<h5>sub－Q格式</h5>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>track
+    <td>轨道号（0xAA是导出区）
+  <tr>
+    <td>index
+    <td>索引号（CUE表的INDEX行）
+  <tr>
+    <td>min
+    <td>轨道的分
+  <tr>
+    <td>sec
+    <td>轨道的秒
+  <tr>
+    <td>frame
+    <td>相对于ses的扇区号（0－74）
+  <tr>
+    <td>amin
+    <td>整盘的分
+  <tr>
+    <td>asec
+    <td>整盘的秒
+  <tr>
+    <td>aframe
+    <td>相对于asec的扇区号（0－74）
+</table>
+<p>　
+<h5> 
+
+测试子命令
+</h5>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>1A
+    <td>ID
+    <td>返回版权保护状态，对无效的数据CD返回StatError，对有效的PSX  
+      CD或者音频CD返回StatStandby。下面的位不太肯定，估计是第3字节0x80位表示CD拒绝，0x10位表示输入。0x080＝拷贝，0x90＝输入拒绝，0x10＝输入接受（只用于Yaroze）。第5到第8字节是从CD得到的SCEx  
+      ASCII字符串。
+  <tr>
+    <td>1B
+    <td>ReadS
+    <td>不重试读取。
+  <tr>
+    <td>1C
+    <td>Reset
+    <td>和打开、关闭驱动器门一样
+  <tr>
+    <td>1E
+    <td>ReadTOC
+    <td>不复位重读内容表。
+</table>
+<p>要发送一个命令：先向CDREG0写0，然后向CDREG2顺序写全部的参数，再写0到CDREG0，最后写命令到CDREG1。
+<p>要等待一个命令完成：等待一个CDROM  
+IRQ发生（中断寄存器第3位），引起CDROM IRQ的原因在CDREG3的低位中。通常成功完成是3，不能完成是5。如果不想用IRQ，也可以只检查CDREG3的低位变成不是0的数，但是要注意它不会因任何IRQ的建立而清空。 
+<p>要获取结果：写1到CDREG0，然后读CDREG0，如果第5位被设置，读CDREG1的返回值，然后再读CDREG0，直到第5位变成0。
+<p>要清除IRQ：命令完成后，引起的IRQ要被清除，可以向CDREG0写1，然后向CDREG2和CDREG3写7来完产。写CDREG2应该是清除先前从一些缓存设置的参数。注意IRQ是队列的，清除了当前的，其它的可能直接跳出来...
+<p>要初始化CD：清除所有IRQ，CDREG0＝0，CDREG3＝0，Com_Delay＝4901(0x1F801020)，发送2个NOP，命令0x0A(无参数），消除静音。
+<p>要开始CD音频回放：CDREG0＝2，CDREG2＝0x80，CDREG3＝0，CDREG0＝3，CDREG1＝0x80，CDREG2＝0，CDREG3＝0x20。也不要忘记初始化SPU，尤其是CDvol和CD使能）
+<p>注意不应该在CD寻道时发送命令（例如设置第6位返回状态），事实是只有在新命令之后才会更新状态。除了可以一直重复执行播放命令（0x03）和检查它的状态是否第6位变低（这时第7位变高）。如果你不这样，而在播放命令完成后直接尝试执行GetLoc命令，CD会停止（可能是CD不能在寻道时获取当前位置，所以逻辑器停止寻道和获取额外的定位，但是不再重启动...）
+<p>19个子命令。
+<p>为了某些原因，有一个计数器计算SCEx从CD-ROM控制器接收到的字符串长度。
+<p>下面这些命令的结果超过了8个字节：
+
+<table border="1" cellspacing="0">
+  <tr>
+    <td>
+      0x04
+    <td>
+      <p>读SCEx计数器(在第一个字节返回？)
+  <tr>
+    <td>
+      0x05
+    <td>
+      <p>复位SCEx计数器。同时设置1A的SCEx响应为 00 00 00 00，但是似乎不会迫使保护失效。 
+  <tr>
+    <td>
+      0x20
+    <td>
+      <p>返回一个指明了CD－ROM固件意图使用区域的ASCII字符串（&quot;for  
+      Japan&quot;,&quot;for U/C&quot;) 
+  <tr>
+    <td>
+      0x22
+    <td>
+      <p>返回一个PSX内部芯片号码
+  <tr>
+    <td>
+      0x23
+    <td>
+      <p>返回另一个芯片号码
+  <tr>
+    <td>
+      0x24
+    <td>
+      <p>返回另一个芯片号码，在某些PSX上和0x22相似。
+</table>
+</body>
+</html>

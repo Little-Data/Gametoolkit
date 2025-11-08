@@ -1,0 +1,3675 @@
+
+<h1><font color="#FF0000">几何变换引擎（GTE）</font></h1>
+<p>几何变换引擎（GTE）是PSX全部3D计算的核心。GTE可以进行向量和矩阵操作，视角变换，颜色均衡等等。它比CPU进行这些操作快得多，作为PSX的第二个协处理器，没有分配物理地址内存，所有的控制通过特殊指令完成。
+<h5>基本算法</h5>
+<p>在3D空间中一个点（顶点）的描述是用一个向量[X,Y,Z]。在GTE操作中，有两种向量，一种是变长度的，另一种是1.0单元长度，叫做法向量。前者用来描述3D空间的一个位置和平移，第二个用来描述方向。
+<p>顶点的旋转是进行顶点向量和旋转矩阵的乘法。旋转矩阵是3×3的矩阵包含了3个正交法向量（它实际上是一个矩阵，描述了顶点所在的坐标系统和全局坐标系统的关系）。这个矩阵来自旋转角度，如下所示：
+<p>s<i><b>n</b></i>＝sin(<i><b>n</b></i>),c<i><b>n</b></i>＝cos(<i><b>n</b></i>)
+<p>绕X轴旋转角度A：
+<table border="1" cellspacing="0">
+  <tr>
+    <td>|1 
+    <td>&nbsp;0
+    <td>&nbsp; 0|        
+  <tr>
+    <td>|0 
+    <td>cA
+    <td>-sA|
+  <tr>
+    <td>|0
+    <td>sA 
+    <td>&nbsp;cA|
+</table>
+<p>绕Y轴旋转角度B：
+<table border="1" cellspacing="0">
+  <tr>
+    <td>|cB 
+    <td>&nbsp;0
+    <td>sB|
+  <tr>
+    <td>|0 
+    <td>&nbsp;1
+    <td>&nbsp;0|
+  <tr>
+    <td>|-sB
+    <td>&nbsp;0 
+    <td>cB|
+</table>
+<p>绕Z轴旋转角度C：
+<table border="1" cellspacing="0">
+  <tr>
+    <td>|cC 
+    <td>-sC
+    <td>&nbsp;0|
+  <tr>
+    <td>|sC 
+    <td>&nbsp;cC
+    <td>&nbsp;0|
+  <tr>
+    <td>|0
+    <td>&nbsp;0 
+    <td>&nbsp;1|
+</table>
+<p>绕多个轴旋转可以通过这些矩阵相乘完成，注意相乘的顺序非常重要。GTE没有sin或者cos函数，所以这些计算要通过CPU完成。平移是简单的两个向量相加，在当前坐标系中重定位顶点，当然，顶点平移和旋转的顺序也是很重要的。
+<p>　
+<h3><font color="#FF00FF"><a name="函数简要描述">函数简要描述</a></font></h3>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>RTPS/RTPT
+    <td>旋转、平移和视角转换<br>
+      这两个函数对1个或者3个顶点同时进行最终的3D计算。这些点先乘以旋转矩阵R再加上平移矩阵TR，最后应用一个视角转换，生成2D屏幕坐标。它也返回一个插值值用在各种深度化指令中。
+  <tr>
+    <td>MVMVA
+    <td>矩阵和向量乘法和加法<br>
+      乘以一个向量和一个旋转矩阵或者光源矩阵或者颜色矩阵，然后加上平移向量或者背景颜色向量
+  <tr>
+    <td>DCPL
+    <td>深度化光源颜色<br>
+      先从光源向量（一个平面的法向量乘以光源矩阵后限制到零）和一个提供的RGB值计算出一个颜色。然后通过在远颜色向量和新得到的颜色之间插值来进行深度化。
+  <tr>
+    <td>DPCS/DPCT
+    <td>单色/3色深度化<br>
+      在一个颜色和远颜色向量之间插值对1个或者3个颜色进行深度化。
+  <tr>
+    <td>INTPL
+    <td>插值<br>
+      在一个向量和远颜色向量之间插值
+  <tr>
+    <td>SQR
+    <td>平方<br>
+      计算一个向量的平方
+  <tr>
+    <td>NCS/CNT
+    <td>法向颜色<br>
+      从一个点或平面的法向和光源和颜色计算一个颜色。法向参考的平面或点的基本颜色认为是白色
+  <tr>
+    <td>NCDS/NCDT
+    <td>法向颜色深度化<br>
+      和NCS/NCT类似，但是同时进行深度化（像DPCS/DPCT）
+  <tr>
+    <td>NCCS/NCCT
+    <td>和NCS/NCT类似，但是平面或点的基本颜色也计算在内
+  <tr>
+    <td>CDP
+    <td>从光源向量（基本颜色当成白色）计算一个颜色和进行深度化（像DPCS）
+  <tr>
+    <td>CC
+    <td>从光源向量和一个基本颜色计算一个颜色
+  <tr>
+    <td>NCLIP
+    <td>计算3个2D点的外积（例如投影后定义一个平面的3个顶点）<br>
+      3个顶点相对于虚拟点应该按顺时针储存，这样如果我们面对平面的背面，函数的结果是负值
+  <tr>
+    <td>AVSZ3/AVSZ4
+    <td>累加3或者4个Z值，然后乘以一个固定点的值。这个值通常是经过挑选的，这样函数可以返回这些Z值的平均值（通常还要用2或者4去除一下，以便加到顺序表OT）
+  <tr>
+    <td>OP
+    <td>计算两个向量的外积
+  <tr>
+    <td>GPF
+    <td>两个向量相乘。返回值作为24位RGB值
+  <tr>
+    <td>GPL
+    <td>一个向量乘以一个标量后加到另一个向量。返回值作为24位RGB值
+</table>
+<p>
+<h3><font color="#FF00FF"><a name="指令">指令</a></font></h3>
+<p>CPU有6个特别的针对GTE寄存器的装入和储存指令，一个指令用来向协处理器下达命令
+<table border="1" cellspacing="0">
+  <tr>
+    <td>rt
+    <td>CPU寄存器0－31
+  <tr>
+    <td>gd
+    <td>GTE数据寄存器0－31
+  <tr>
+    <td>gc
+    <td>GTE控制寄存器0－31
+  <tr>
+    <td>imm
+    <td>16位立即数
+  <tr>
+    <td>base
+    <td>CPU寄存器0－31
+  <tr>
+    <td>imm（base）
+    <td>base＋imm指向的地址
+  <tr>
+    <td>b25
+    <td>25位字长数据段
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>LWC2 gd,imm(base)        
+    <td>储存imm（base）的值到GTE数据寄存器gd
+  <tr>
+    <td>SWC2 gd,imm(base)
+    <td>储存GTE数据寄存器到imm（base）
+  <tr>
+    <td>MTC2 rt,gd        
+    <td>储存寄存器rt到GTE数据寄存器gd
+  <tr>
+    <td>MFC2 rt,gd
+    <td>储存GTE数据寄存器gd到寄存器rt
+  <tr>
+    <td>CTC2 rt,gc
+    <td>储存寄存器rt到GTE控制寄存器gc
+  <tr>
+    <td>CFC2 rt,gc
+    <td>储存GTE控制寄存器gc到寄存器rt
+  <tr>
+    <td>COP2 b25
+    <td>执行GTE命令
+</table>
+<p>所有访问该寄存器的GTE命令和操作，GTE装入和储存指令有2个指令的延迟。
+<h5>对GTE编程</h5>
+<p>使用GTE前要先打开它，在系统控制协处理器（cop0）的状态寄存器中分配了第30位给GTE。在使用任何GTE指令前，先要设置它。
+<p>GTE指令和函数不应该用在：跳转和分支的延迟中、事件处理和中断中。
+<p>如果在当前GTE命令未完成前读取GTE寄存器或者执行GTE命令，CPU会保持它知道指令完成。每个GTE指令所需的周期数在命令列表中显示。
+<h5>　</h5>
+<h3><font color="#FF00FF"><a name="寄存器">寄存器</a></font></h3>
+<p>GTE有32个数据寄存器和32个控制寄存器，每个都是32字长。控制寄存器通称为Cop2C，数据寄存器称为Cop2D。下表描述了他们的用法。
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">控制寄存器Cop2C
+  <tr>
+    <td>序号
+    <td>名称
+    <td>描述
+  <tr>
+    <td>0
+    <td>R11R12
+    <td>旋转矩阵元素11，12
+  <tr>
+    <td>1
+    <td>R13R21
+    <td>旋转矩阵元素13，21
+  <tr>
+    <td>2
+    <td>R22R23
+    <td>旋转矩阵元素22，23
+  <tr>
+    <td>3
+    <td>R31R32
+    <td>旋转矩阵元素31，32
+  <tr>
+    <td>4
+    <td>R33
+    <td>旋转矩阵元素33
+  <tr>
+    <td>5
+    <td>TRX
+    <td>旋转向量X
+  <tr>
+    <td>6
+    <td>TRY
+    <td>旋转向量Y
+  <tr>
+    <td>7
+    <td>TRZ
+    <td>旋转向量Z
+  <tr>
+    <td>8
+    <td>L11L12
+    <td>光源矩阵元素11，12
+  <tr>
+    <td>9
+    <td>L13L21
+    <td>光源矩阵元素13，21
+  <tr>
+    <td>10
+    <td>L22L23
+    <td>光源矩阵元素22，23
+  <tr>
+    <td>11
+    <td>L31L32
+    <td>光源矩阵元素31，32
+  <tr>
+    <td>12
+    <td>L33
+    <td>光源矩阵元素33
+  <tr>
+    <td>13
+    <td>RBK
+    <td>背景颜色红色分量
+  <tr>
+    <td>14
+    <td>BBK
+    <td>背景颜色蓝色分量
+  <tr>
+    <td>15
+    <td>GBK
+    <td>背景颜色绿色分量
+  <tr>
+    <td>16
+    <td>LR1LR2
+    <td>光源颜色矩阵源1和2红色分量
+  <tr>
+    <td>17
+    <td>LR3LG1
+    <td>光源颜色矩阵源3红色，1绿色分量
+  <tr>
+    <td>18
+    <td>LG2LG3
+    <td>光源颜色矩阵源2和3绿色分量
+  <tr>
+    <td>19
+    <td>LB1LB2
+    <td>光源颜色矩阵源1和2蓝色分量
+  <tr>
+    <td>20
+    <td>LB3
+    <td>光源颜色矩阵源3蓝色分量
+  <tr>
+    <td>21
+    <td>RFC
+    <td>远颜色红色分量
+  <tr>
+    <td>22
+    <td>GFC
+    <td>远颜色绿色分量
+  <tr>
+    <td>23
+    <td>BFC
+    <td>远颜色蓝色分量
+  <tr>
+    <td>24
+    <td>OFX
+    <td>屏幕偏移X
+  <tr>
+    <td>25
+    <td>OFY
+    <td>屏幕偏移Y
+  <tr>
+    <td>26
+    <td>H
+    <td>投影平面距离
+  <tr>
+    <td>27
+    <td>DQA
+    <td>深度查询参数A（系数）
+  <tr>
+    <td>28
+    <td>DQB
+    <td>深度查询参数B（偏移）
+  <tr>
+    <td>29
+    <td>ZSF3
+    <td>Z3平均缩放因子（通常是1/3）
+  <tr>
+    <td>30
+    <td>ZSF4
+    <td>Z4平均缩放因子（通常是1/4）
+  <tr>
+    <td>31
+    <td>FLAG
+    <td>返回任何计算错误
+</table>
+<h5>　</h5>
+<h3><font color="#FF00FF"><a name="控制寄存器">控制寄存器</a></font></h3>
+<p>GTE使用带符号定点寄存器进行运算，下面是寄存器字长描述。
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="6">R11R12、R13R21、R22R23、R31R32
+  <tr>
+    <td colspan="6">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;         
+      0
+  <tr>
+    <td colspan="3">R11、R13、R22、R31
+    <td colspan="3">R12、R21、R23、R32
+  <tr>
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+  <tr>
+    <td>1
+    <td>3
+    <td>12
+    <td>1
+    <td>3
+    <td>12
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="4">R33
+  <tr>
+    <td colspan="4">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;         
+      0
+  <tr>
+    <td>0
+    <td colspan="3">R33
+  <tr>
+    <td>　
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+  <tr>
+    <td>16&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+    <td>1
+    <td>3
+    <td>12
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="2">TRX、TRY、TRZ
+  <tr>
+    <td colspan="2">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+      0       
+  <tr>
+    <td>符号
+    <td>整数部分
+  <tr>
+    <td>1
+    <td>0
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="6">L11L12、L13L21、L22L23、L31L32
+  <tr>
+    <td colspan="6">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;         
+      0
+  <tr>
+    <td colspan="3">L11、L13、L22、L31
+    <td colspan="3">L12、L21、L23、L32
+  <tr>
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+  <tr>
+    <td>1
+    <td>3
+    <td>12
+    <td>1
+    <td>3
+    <td>12
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="4">L33
+  <tr>
+    <td colspan="4">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;         
+      0
+  <tr>
+    <td>0
+    <td colspan="3">L33
+  <tr>
+    <td>　
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+  <tr>
+    <td>16&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+    <td>1
+    <td>3
+    <td>12
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">RBK、GBK、BBK
+  <tr>
+    <td colspan="3">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;         
+      0
+  <tr>
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+  <tr>
+    <td>1
+    <td>19
+    <td>12
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="6">LR1LR2、LR3LG1、LG2LG3、LB1LB2
+  <tr>
+    <td colspan="6">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;         
+      0
+  <tr>
+    <td colspan="3">LR1、LR3、LG2、LB1
+    <td colspan="3">LR2、LG1、LG3、LB2
+  <tr>
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+  <tr>
+    <td>1
+    <td>3
+    <td>12
+    <td>1
+    <td>3
+    <td>12
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="4">LB3
+  <tr>
+    <td colspan="4">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;         
+      0
+  <tr>
+    <td>0
+    <td colspan="3">LB3
+  <tr>
+    <td>　
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+  <tr>
+    <td>16&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+    <td>1
+    <td>3
+    <td>12
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">RFC、GFC、BFC
+  <tr>
+    <td colspan="3">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;         
+      0
+  <tr>
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+  <tr>
+    <td>1
+    <td>27
+    <td>4
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">OFX、OFY
+  <tr>
+    <td colspan="3">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;         
+      0
+  <tr>
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+  <tr>
+    <td>1
+    <td>15
+    <td>16
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="2">H
+  <tr>
+    <td colspan="2">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0
+  <tr>
+    <td>0
+    <td>H&nbsp; 整数
+  <tr>
+    <td>16&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+    <td>16
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="4">DQA、DQB
+  <tr>
+    <td colspan="4">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;         
+      0
+  <tr>
+    <td>0
+    <td colspan="3">DQA
+  <tr>
+    <td>　
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+  <tr>
+    <td>16&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+    <td>1
+    <td>7
+    <td>8
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="4">ZF3、ZF4
+  <tr>
+    <td colspan="4">31&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;         
+      0
+  <tr>
+    <td>0
+    <td colspan="3">ZF3
+  <tr>
+    <td>　
+    <td>符号
+    <td>整数部分
+    <td>小数部分
+  <tr>
+    <td>16&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+    <td>1
+    <td>3
+    <td>12
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="2">标志寄存器
+  <tr>
+    <td>位
+    <td>标志
+  <tr>
+    <td>31
+    <td>第30－23、18－13位的逻辑和
+  <tr>
+    <td>30
+    <td>计算测试结果＃1溢出（大于2^43）
+  <tr>
+    <td>29
+    <td>计算测试结果＃2溢出（大于2^43）
+  <tr>
+    <td>28
+    <td>计算测试结果＃3溢出（大于2^43）
+  <tr>
+    <td>27
+    <td>计算测试结果＃1下溢出（小于－2^43）
+  <tr>
+    <td>26
+    <td>计算测试结果＃2下溢出（小于－2^43）
+  <tr>
+    <td>25
+    <td>计算测试结果＃3下溢出（小于－2^43）
+  <tr>
+    <td>24
+    <td>限制器A1超出范围（小于0，或者小于-2^15，或者大于2^15）
+  <tr>
+    <td>23
+    <td>限制器A2超出范围（小于0，或者小于-2^15，或者大于2^15）
+  <tr>
+    <td>22
+    <td>限制器A3超出范围（小于0，或者小于-2^15，或者大于2^15）
+  <tr>
+    <td>21
+    <td>限制器B1超出范围（小于0，或者大于2^8）
+  <tr>
+    <td>20
+    <td>限制器B2超出范围（小于0，或者大于2^8）
+  <tr>
+    <td>19
+    <td>限制器B3超出范围（小于0，或者大于2^8）
+  <tr>
+    <td>18
+    <td>限制器C超出范围（小于0，或者大于2^16）
+  <tr>
+    <td>17
+    <td>除法溢出（商大于等于2.0）
+  <tr>
+    <td>16
+    <td>计算测试结果＃4溢出（大于2^43）
+  <tr>
+    <td>15
+    <td>计算测试结果＃4下溢出（小于－2^43）
+  <tr>
+    <td>14
+    <td>限制器D1超出范围（小于-2^10，或者大于2^10）
+  <tr>
+    <td>13
+    <td>限制器D2超出范围（小于-2^10，或者大于2^10）
+  <tr>
+    <td>12
+    <td>限制器E超出范围（小于0，或者大于2^12）
+</table>
+<p>　
+<h3><font color="#FF00FF"><a name="数据寄存器">数据寄存器</a></font></h3>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="7">数据寄存器Cop2D
+  <tr>
+    <td>序号
+    <td>名字
+    <td>读/写
+    <td>31&nbsp;&nbsp; 16        
+    <td>15&nbsp;&nbsp;&nbsp; 0        
+    <td>定点数格式
+    <td>描述
+  <tr>
+    <td>0
+    <td>VXY0
+    <td>R/W
+    <td>VY0
+    <td>VX0
+    <td>1,3,12或者1,15,0
+    <td>向量0的X和Y
+  <tr>
+    <td>1
+    <td>VZ0
+    <td>R/W
+    <td>0
+    <td>VZ0
+    <td>1,3,12或者1,15,0
+    <td>向量0的Z
+  <tr>
+    <td>2
+    <td>VXY1
+    <td>R/W
+    <td>VY1
+    <td>VX1
+    <td>1,3,12或者1,15,0
+    <td>向量1的X和Y
+  <tr>
+    <td>3
+    <td>VZ1
+    <td>R/W
+    <td>0
+    <td>VZ1
+    <td>1,3,12或者1,15,0
+    <td>向量1的Z
+  <tr>
+    <td>4
+    <td>VXY2
+    <td>R/W
+    <td>VY2
+    <td>VX2
+    <td>1,3,12或者1,15,0
+    <td>向量2的X和Y
+  <tr>
+    <td>5
+    <td>VZ2
+    <td>R/W
+    <td>0
+    <td>VZ2
+    <td>1,3,12或者1,15,0
+    <td>向量2的Z
+  <tr>
+    <td>6
+    <td>RGB
+    <td>R/W
+    <td>Code,R
+    <td>G,B
+    <td>每个8位
+    <td>RGB值，Code也传送但是不用在计算中
+  <tr>
+    <td>7
+    <td>OTZ
+    <td>R
+    <td>0
+    <td>OTZ
+    <td>0,15,0
+    <td>Z平均值
+  <tr>
+    <td>8
+    <td>IR0
+    <td>R/W
+    <td>符号
+    <td>IR0
+    <td>1,3,12
+    <td>立即数0，格式可能不同
+  <tr>
+    <td>9
+    <td>IR1
+    <td>R/W
+    <td>符号
+    <td>IR1
+    <td>1,3,12
+    <td>立即数1，格式可能不同
+  <tr>
+    <td>10
+    <td>IR2
+    <td>R/W
+    <td>符号
+    <td>IR2
+    <td>1,3,12
+    <td>立即数2，格式可能不同
+  <tr>
+    <td>11
+    <td>IR3
+    <td>R/W
+    <td>符号
+    <td>IR3
+    <td>1,3,12
+    <td>立即数3，格式可能不同
+  <tr>
+    <td>12
+    <td>SXY0
+    <td>R/W
+    <td>SX0
+    <td>SY0
+    <td>1,15,0
+    <td>屏幕XY坐标FIFO（注1）
+  <tr>
+    <td>13
+    <td>SXY1
+    <td>R/W
+    <td>SX1
+    <td>SY1
+    <td>1,15,0
+    <td>屏幕XY坐标FIFO（注1）
+  <tr>
+    <td>14
+    <td>SXY2
+    <td>R/W
+    <td>SX2
+    <td>SY2
+    <td>1,15,0
+    <td>屏幕XY坐标FIFO（注1）
+  <tr>
+    <td>15
+    <td>SXYP
+    <td>R/W
+    <td>SXP
+    <td>SYP
+    <td>1,15,0
+    <td>屏幕XY坐标FIFO（注1）
+  <tr>
+    <td>16
+    <td>SZ0
+    <td>R/W
+    <td>0
+    <td>SZ0
+    <td>0,16,0
+    <td>屏幕Z FIFO（注1）      
+  <tr>
+    <td>17
+    <td>SZ1
+    <td>R/W
+    <td>0
+    <td>SZ1
+    <td>0,16,0
+    <td>屏幕Z FIFO（注1）      
+  <tr>
+    <td>18
+    <td>SZ2
+    <td>R/W
+    <td>0
+    <td>SZ2
+    <td>0,16,0
+    <td>屏幕Z FIFO（注1）      
+  <tr>
+    <td>19
+    <td>SZ3
+    <td>R/W
+    <td>0
+    <td>SZ3
+    <td>0,16,0
+    <td>屏幕Z FIFO（注1）      
+  <tr>
+    <td>20
+    <td>RGB0
+    <td>R/W
+    <td>CD0,B0
+    <td>G0,R0
+    <td>每个8位
+    <td>特征颜色FIFO（注1）
+  <tr>
+    <td>21
+    <td>RGB1
+    <td>R/W
+    <td>CD1,B1
+    <td>G1,R0
+    <td>每个8位
+    <td>特征颜色FIFO（注1）
+  <tr>
+    <td>22
+    <td>RGB2
+    <td>R/W
+    <td>CD2,B2
+    <td>G2,R0
+    <td>每个8位
+    <td>特征颜色FIFO（注1），CD2是当前执行函数的位图案
+  <tr>
+    <td>23
+    <td>RES1
+    <td>－
+    <td>－
+    <td>－
+    <td>－
+    <td>禁止
+  <tr>
+    <td>24
+    <td>MAC0
+    <td>R/W
+    <td>MAC0
+    <td>1,31,0
+    <td>乘积之和0
+    <td>
+  <tr>
+    <td>25
+    <td>MAC1
+    <td>R/W
+    <td>MAC1
+    <td>1,31,0
+    <td>乘积之和1
+    <td>
+  <tr>
+    <td>26
+    <td>MAC2
+    <td>R/W
+    <td>MAC2
+    <td>1,31,0
+    <td>乘积之和2
+    <td>
+  <tr>
+    <td>27
+    <td>MAC3
+    <td>R/W
+    <td>MAC3
+    <td>1,31,0
+    <td>乘积之和3
+    <td>
+  <tr>
+    <td>28
+    <td>IRGB
+    <td>W
+    <td>0
+    <td>IB,IG,IR
+    <td>注2
+    <td>注2
+  <tr>
+    <td>29
+    <td>ORGB
+    <td>R
+    <td>0
+    <td>OB,OG,OR
+    <td>注3
+    <td>注3
+  <tr>
+    <td>30
+    <td>LZCS
+    <td>W
+    <td>LZCS
+    <td>1,31,0
+    <td>源数据前导0计数（注4）
+    <td>
+  <tr>
+    <td>31
+    <td>LZCR
+    <td>R
+    <td>LZCR
+    <td>6,6,0
+    <td>结果前导0计数（注4）
+    <td>
+</table>
+<p>注1：SXYx，SZx和RGBx是FIFO寄存器，最后计算的结果存在最后的寄存器，如果得到一个新的SXY值，下面的事情将会发生：
+<p>&nbsp;&nbsp;&nbsp; SXY0＝SXY1<br>      
+&nbsp;&nbsp;&nbsp; SXY1＝SXY2<br>      
+&nbsp;&nbsp;&nbsp; SXY2＝SXYP<br>      
+&nbsp;&nbsp;&nbsp; SXYP＝结果      
+<p>注2：
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="4">IRGB
+  <tr>
+    <td>0
+    <td>R
+    <td>G
+    <td>B
+  <tr>
+    <td>31&nbsp;&nbsp; 15      
+    <td>14&nbsp;&nbsp; 10      
+    <td>9&nbsp;&nbsp;&nbsp; 5      
+    <td>4&nbsp;&nbsp;&nbsp; 0      
+</table>
+<p>当向IRGB写一个值时，发生下面的事情：
+<p>IR1＝IR格式转换到（1，11，4）<br>
+IR2＝IG格式转换到（1，11，4）<br>
+IR3＝IB格式转换到（1，11，4）
+<p>注3：
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="4">IRGB
+  <tr>
+    <td>0
+    <td>R
+    <td>G
+    <td>B
+  <tr>
+    <td>31&nbsp;&nbsp; 15      
+    <td>14&nbsp;&nbsp; 10      
+    <td>9&nbsp;&nbsp;&nbsp; 5      
+    <td>4&nbsp;&nbsp;&nbsp; 0      
+</table>
+<p>当向IRGB写一个值时，发生下面的事情：
+<p>IR＝(IR1&gt;&gt;7)&amp;0x1F<br>
+IG＝(IR2&gt;&gt;7)&amp;0x1F<br>
+IB＝(IR3&gt;&gt;7)&amp;0x1F
+<p>注4：
+<p>如果LZCS是正数，读取LZCR返回LZCS的前导0，如果是负数，返回前导1。
+<p>　
+<h3><font color="#FF00FF"><a name="GTE命令">GTE命令</a></font></h3>
+<p>这节描述各种GTE函数的实际进行的计算。第一行是函数的名字、周期数和简要描述，第二行包含了任何需要输入到操作码的字段，第三行是实际操作码。在列表的最后查看各字段和它们的描述。然后是一个需要输入的各个寄存器列表和输出的寄存器列表。再然后是初始化函数后进行的计算，左边格式字段是数据存放格式，右边格式字段是计算进行所需的格式。在计算的某时刻，会进行一些检查和限制，结果存在标志寄存器中，见前面的表。下面计算表中第二列内方括号的内容表示被前面的限制符限制，附加的限制标识器表示数值如果超出了范围就被限制到下限或上限。
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>RTPS
+    <td>15
+    <td>cop2 0x0180001
+    <td>视角转换
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>V0
+    <td>转换向量
+    <td>1，15，0
+  <tr>
+    <td>R
+    <td>旋转矩阵
+    <td>1，3，12
+  <tr>
+    <td>TR
+    <td>平移向量
+    <td>1，31，0
+  <tr>
+    <td>H
+    <td>视平面距离
+    <td>0，16，0
+  <tr>
+    <td>DQA<br>
+      DQB
+    <td>深度查询插值值
+    <td>1，7，8
+  <tr>
+    <td>OFX<br>
+      OFY
+    <td>屏幕平移值
+    <td>1，15，16
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>SXY FIFO     
+    <td>屏幕XY坐标（短）
+    <td>1，15，0
+  <tr>
+    <td>SZ FIFO
+    <td>屏幕Z坐标（短）
+    <td>0，16，0
+  <tr>
+    <td>IR0
+    <td>深度查询插值值
+    <td>1，3，12
+  <tr>
+    <td>IR1
+    <td>屏幕X（短）
+    <td>1，15，0
+  <tr>
+    <td>IR2
+    <td>屏幕Y（短）
+    <td>1，15，0
+  <tr>
+    <td>IR3
+    <td>屏幕Z（短）
+    <td>1，15，0
+  <tr>
+    <td>MAC1
+    <td>屏幕X（长）
+    <td>1，31，0
+  <tr>
+    <td>MAC2
+    <td>屏幕Y（长）
+    <td>1，31，0
+  <tr>
+    <td>MAC3
+    <td>屏幕Z（长）
+    <td>1，31，0
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算
+  <tr>
+    <td>1,31,0
+    <td>MAC1=A1[TRX + R11*VX0 + 
+      R12*VY0 + R13*VZ0]
+    <td>1,31,12
+  <tr>
+    <td>1,31,0
+    <td>MAC2=A2[TRY + R21*VX0 + 
+      R22*VY0 + R23*VZ0]
+    <td>1,31,12
+  <tr>
+    <td>1,31,0
+    <td>MAC3=A3[TRZ + R31*VX0 + 
+      R32*VY0 + R33*VZ0]
+    <td>1,31,12
+  <tr>
+    <td>1,15,0
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,31,0
+  <tr>
+    <td>1,15,0
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,31,0
+  <tr>
+    <td>1,15,0
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,31,0
+  <tr>
+    <td>　
+    <td>SZ0&lt;-SZ1&lt;-SZ2&lt;-SZ3
+    <td>1,31,0
+  <tr>
+    <td>0,16,0
+    <td>SZ3= Lm_D(MAC3)
+    <td>　
+  <tr>
+    <td>　
+    <td>SX0&lt;-SX1&lt;-SX2,      
+      SY0&lt;-SY1&lt;-SY2
+    <td>　
+  <tr>
+    <td>1,15,0
+    <td>Lm_G1[F[OFX + IR1*(H/SZ)]]
+    <td>1,27,16
+  <tr>
+    <td>1,15,0
+    <td>SY2= Lm_G2[F[OFY + 
+      IR2*(H/SZ)]]
+    <td>　
+  <tr>
+    <td>1,31,0
+    <td>MAC0= F[DQB + DQA * (H/SZ)]
+    <td>1,19,24
+  <tr>
+    <td>1,15,0
+    <td>IR0= Lm_H[MAC0]
+    <td>1,31,0
+  <tr>
+    <td colspan="3">注：Z值下限为0.5×H，对于更小的Z值，你要自己写程序。
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>RTPT
+    <td>23
+    <td>cop2 0x0280030
+    <td>3点视角转换
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>V0<br>
+      V1<br>
+      V2
+    <td>转换向量
+    <td>1，15，0
+  <tr>
+    <td>R
+    <td>旋转矩阵
+    <td>1，3，12
+  <tr>
+    <td>TR
+    <td>平移向量
+    <td>1，31，0
+  <tr>
+    <td>H
+    <td>视平面距离
+    <td>0，16，0
+  <tr>
+    <td>DQA<br>
+      DQB
+    <td>深度查询插值值
+    <td>1，7，8
+  <tr>
+    <td>OFX<br>
+      OFY
+    <td>屏幕平移值
+    <td>1，15，16
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>SXY FIFO     
+    <td>屏幕XY坐标（短）
+    <td>1，15，0
+  <tr>
+    <td>SZ FIFO
+    <td>屏幕Z坐标（短）
+    <td>0，16，0
+  <tr>
+    <td>IR0
+    <td>深度查询插值值
+    <td>1，3，12
+  <tr>
+    <td>IR1
+    <td>屏幕X（短）
+    <td>1，15，0
+  <tr>
+    <td>IR2
+    <td>屏幕Y（短）
+    <td>1，15，0
+  <tr>
+    <td>IR3
+    <td>屏幕Z（短）
+    <td>1，15，0
+  <tr>
+    <td>MAC1
+    <td>屏幕X（长）
+    <td>1，31，0
+  <tr>
+    <td>MAC2
+    <td>屏幕Y（长）
+    <td>1，31，0
+  <tr>
+    <td>MAC3
+    <td>屏幕Z（长）
+    <td>1，31，0
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>计算
+  <tr>
+    <td>和RTPS一样，但是重复V1和V2
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>MVMVA
+    <td>8
+    <td>cop2 0x0400012
+    <td>向量乘以矩阵加上向量
+  <tr>
+    <td>字段
+    <td colspan="3">sf,mx,v,cv,lm
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>V0/V1/V2/IR
+    <td>向量V0,V1,V2或者[IR1,IR2,IR3]
+    <td>　
+  <tr>
+    <td>R/LLM/LCM
+    <td>旋转、光或者颜色矩阵
+    <td>1，3，12
+  <tr>
+    <td>TR/BK
+    <td>平移或者背景颜色向量
+    <td>　
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>短向量
+    <td>　
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>长向量
+    <td>　
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>计算
+  <tr>
+    <td>MX＝mx指定的矩阵<br>
+      V ＝v 指定的矩阵<br>     
+      CV＝cv指定的矩阵<br>
+      MAC1=A1[CV1 + MX11*V1 +      
+      MX12*V2 + MX13*V3]<br>     
+      MAC2=A2[CV2 + MX21*V1 + MX22*V2 + MX23*V3]<br>     
+      MAC3=A3[CV3 + MX31*V1 + MX32*V2 + MX33*V3]<br>     
+      IR1=Lm_B1[MAC1]<br>
+      IR2=Lm_B2[MAC2]<br>
+      IR3=Lm_B3[MAC3]<br>
+      注，cv字段允许选择远颜色向量，但是GTE不能正确加这个向量
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>DPCL
+    <td>8
+    <td>cop2 0x0680029
+    <td>深度化颜色光源
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>RGB
+    <td>主颜色。 R，G，B，CODE     
+    <td>0，8，0
+  <tr>
+    <td>IR0
+    <td>插值值
+    <td>1，3，12
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>本地颜色向量
+    <td>1，3，12
+  <tr>
+    <td>CODE
+    <td>由RGB得到的颜色值 CODE     
+    <td>0，8，0
+  <tr>
+    <td>FC
+    <td>远颜色
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>RGBn
+    <td>RGB FIFO&nbsp;&nbsp;&nbsp;&nbsp; Rn，Gn，Bn，CDn     
+    <td>0，8，0
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>颜色向量
+    <td>1，11，4
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>颜色向量
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算
+  <tr>
+    <td>1,27,4
+    <td>MAC1=A1[R*IR1 + IR0*(Lm_B1[RFC 
+      - R * IR1])]
+    <td>1,27,16
+  <tr>
+    <td>1,27,4
+    <td>MAC2=A2[G*IR2 + IR0*(Lm_B1[GFC 
+      - G * IR2])]
+    <td>1,27,16
+  <tr>
+    <td>1,27,4
+    <td>MAC3=A3[B*IR3 + IR0*(Lm_B1[BFC - B * IR3])]
+    <td>1,27,16
+  <tr>
+    <td>1,11,4
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,27,4
+  <tr>
+    <td>1,11,4
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,27,4
+  <tr>
+    <td>1,11,4
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>Cd0&lt;-Cd1&lt;-Cd2&lt;- CODE
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>R0&lt;-R1&lt;-R2&lt;- Lm_C1[MAC1]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>G0&lt;-G1&lt;-G2&lt;- 
+      Lm_C2[MAC2]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>B0&lt;-B1&lt;-B2&lt;- 
+      Lm_C3[MAC3]
+    <td>1,27,4
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>DPCS
+    <td>8
+    <td>cop2 0x0780010
+    <td>深度化
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>IR0
+    <td>插值值
+    <td>1，3，12
+  <tr>
+    <td>RGB
+    <td>颜色。 R，G，B，CODE     
+    <td>0，8，0
+  <tr>
+    <td>FC
+    <td>远颜色&nbsp; RFC,GFC,BFC     
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>RGBn
+    <td>RGB FIFO&nbsp;&nbsp;&nbsp;&nbsp; Rn，Gn，Bn，CDn     
+    <td>0，8，0
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>颜色向量
+    <td>1，11，4
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>颜色向量
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算
+  <tr>
+    <td>1,27,4
+    <td>MAC1=A1[(R + IR0*(Lm_B1[RFC - 
+      R])]
+    <td>1,27,16&nbsp;&nbsp; lm=0     
+  <tr>
+    <td>1,27,4
+    <td>MAC2=A2[(G + IR0*(Lm_B1[GFC - 
+      G])]
+    <td>1,27,16&nbsp;&nbsp; lm=0     
+  <tr>
+    <td>1,27,4
+    <td>MAC3=A3[(B + IR0*(Lm_B1[BFC - 
+      B])]
+    <td>1,27,16&nbsp;&nbsp; lm=0     
+  <tr>
+    <td>1,11,4
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm=0     
+  <tr>
+    <td>1,11,4
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm=0     
+  <tr>
+    <td>1,11,4
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm=0     
+  <tr>
+    <td>0,8,0
+    <td>Cd0&lt;-Cd1&lt;-Cd2&lt;- CODE
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>R0&lt;-R1&lt;-R2&lt;- Lm_C1[MAC1]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>G0&lt;-G1&lt;-G2&lt;- 
+      Lm_C2[MAC2]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>B0&lt;-B1&lt;-B2&lt;- 
+      Lm_C3[MAC3]
+    <td>1,27,4
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>DPCT
+    <td>17
+    <td>cop2 0x0F8002A
+    <td>深度化颜色RGB0，RGB1，RGB2
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>IR0
+    <td>插值值
+    <td>1，3，12
+  <tr>
+    <td>RGB0，RGB1，RGB2
+    <td>RGB FIFO中的颜色。 Rn，Gn，Bn，CDn     
+    <td>0，8，0
+  <tr>
+    <td>FC
+    <td>远颜色&nbsp; RFC,GFC,BFC     
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>RGBn
+    <td>RGB FIFO&nbsp;&nbsp;&nbsp;&nbsp; Rn，Gn，Bn，CDn     
+    <td>0，8，0
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>颜色向量
+    <td>1，11，4
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>颜色向量
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算
+  <tr>
+    <td>1,27,4
+    <td>MAC1=A1[R0+ IR0*(Lm_B1[RFC - 
+      R0])]
+    <td>1,27,16&nbsp;&nbsp; lm=0     
+  <tr>
+    <td>1,27,4
+    <td>MAC2=A2[G0+ IR0*(Lm_B1[GFC - 
+      G0])]
+    <td>1,27,16&nbsp;&nbsp; lm=0     
+  <tr>
+    <td>1,27,4
+    <td>MAC3=A3[B0+ IR0*(Lm_B1[BFC - 
+      B0])]
+    <td>1,27,16&nbsp;&nbsp; lm=0     
+  <tr>
+    <td>1,11,4
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm=0     
+  <tr>
+    <td>1,11,4
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm=0     
+  <tr>
+    <td>1,11,4
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm=0     
+  <tr>
+    <td>0,8,0
+    <td>Cd0&lt;-Cd1&lt;-Cd2&lt;- CODE
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>R0&lt;-R1&lt;-R2&lt;- Lm_C1[MAC1]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>G0&lt;-G1&lt;-G2&lt;- 
+      Lm_C2[MAC2]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>B0&lt;-B1&lt;-B2&lt;- 
+      Lm_C3[MAC3]
+    <td>1,27,4
+  <tr>
+    <td colspan="3">执行这个计算3次，所有3个RGB颜色都被深度化RGB颜色替换
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>INTPL
+    <td>8
+    <td>cop2 0x0980011
+    <td>向量和远颜色插值
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>向量
+    <td>1，3，12
+  <tr>
+    <td>IR0
+    <td>插值值
+    <td>1，3，12
+  <tr>
+    <td>CODE
+    <td>由RGB得到的颜色。&nbsp;&nbsp; CODE     
+    <td>0，8，0
+  <tr>
+    <td>FC
+    <td>远颜色&nbsp; RFC,GFC,BFC     
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>RGBn
+    <td>RGB FIFO&nbsp;&nbsp;&nbsp;&nbsp; Rn，Gn，Bn，CDn     
+    <td>0，8，0
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>颜色向量
+    <td>1，11，4
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>颜色向量
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算
+  <tr>
+    <td>1,27,4
+    <td>MAC1=A1[IR1 + IR0*(Lm_B1[RFC - 
+      IR1])]
+    <td>1,27,16
+  <tr>
+    <td>1,27,4
+    <td>MAC2=A2[IR2 + IR0*(Lm_B1[GFC - 
+      IR2])]
+    <td>1,27,16
+  <tr>
+    <td>1,27,4
+    <td>MAC3=A3[IR3 + IR0*(Lm_B1[BFC - 
+      IR3])]
+    <td>1,27,16
+  <tr>
+    <td>1,11,4
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,27,4
+  <tr>
+    <td>1,11,4
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,27,4
+  <tr>
+    <td>1,11,4
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>Cd0&lt;-Cd1&lt;-Cd2&lt;- CODE
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>R0&lt;-R1&lt;-R2&lt;- Lm_C1[MAC1]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>G0&lt;-G1&lt;-G2&lt;- 
+      Lm_C2[MAC2]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>B0&lt;-B1&lt;-B2&lt;- 
+      Lm_C3[MAC3]
+    <td>1,27,4
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>SQR
+    <td>5
+    <td>cop2 0x0A00428
+    <td>向量平方
+  <tr>
+    <td>字段
+    <td colspan="3">sf
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>向量
+    <td>1，15，0或者1，3，12
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>向量^2
+    <td>1，15，0或者1，3，12
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>向量^2
+    <td>1，15，0或者1，3，12
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算：左边格式sf＝0，右边格式sf＝1
+  <tr>
+    <td>1,31,0或者1,19,12
+    <td>MAC1=A1[IR1*IR1]
+    <td>1,43,0或者1,31,12
+  <tr>
+    <td>1,31,0或者1,19,12
+    <td>MAC2=A2[IR2*IR2]
+    <td>1,43,0或者1,31,12
+  <tr>
+    <td>1,31,0或者1,19,12
+    <td>MAC3=A3[IR3*IR3]
+    <td>1,43,0或者1,31,12
+  <tr>
+    <td>1,15,0或者1,3,12
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,31,0或者1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,15,0或者1,3,12
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,31,0或者1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,15,0或者1,3,12
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,31,0或者1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>NCS
+    <td>14
+    <td>cop2 0x0C8041E
+    <td>法颜色V0
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>V0
+    <td>法颜色
+    <td>1，3，12
+  <tr>
+    <td>BK
+    <td>背景颜色 RGB，GBK，RBK     
+    <td>1，19，12
+  <tr>
+    <td>CODE
+    <td>由RGB得到的颜色值&nbsp; CODE     
+    <td>0，8，0
+  <tr>
+    <td>LCM
+    <td>颜色矩阵
+    <td>1，3，12
+  <tr>
+    <td>LLM
+    <td>光源矩阵
+    <td>1，3，12
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>RGBn
+    <td>RGB FIFO&nbsp;&nbsp; Rn，Gn，Bn，CDn     
+    <td>0，8，0
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>颜色向量
+    <td>1，11，4
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>颜色向量
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算：
+  <tr>
+    <td>1,19,12
+    <td>MAC1=A1[L11*VX0 + L12*VY0 + 
+      L13*VZ0]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC2=A2[L21*VX0 + L22*VY0 + 
+      L23*VZ0]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC3=A3[L31*VX0 + L32*VY0 + 
+      L33*VZ0]
+    <td>1,19,24
+  <tr>
+    <td>1,3,12
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,19,12
+    <td>MAC1=A1[RBK + LR1*IR1 + 
+      LR2*IR2 + LR3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC2=A2[GBK + LG1*IR1 + 
+      LG2*IR2 + LG3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC3=A3[BBK + LB1*IR1 + 
+      LB2*IR2 + LB3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,3,12
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>0,8,0
+    <td>Cd0&lt;-Cd1&lt;-Cd2&lt;- CODE
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>R0&lt;-R1&lt;-R2&lt;- Lm_C1[MAC1]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>G0&lt;-G1&lt;-G2&lt;- 
+      Lm_C2[MAC2]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>B0&lt;-B1&lt;-B2&lt;- 
+      Lm_C3[MAC3]
+    <td>1,27,4
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>NCT
+    <td>30
+    <td>cop2 0x0D80420
+    <td>法颜色V0,V1,V2
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>V0，V1，V2
+    <td>法向量
+    <td>1，3，12
+  <tr>
+    <td>BK
+    <td>背景颜色 RGB，GBK，RBK     
+    <td>1，19，12
+  <tr>
+    <td>CODE
+    <td>由RGB得到的颜色值&nbsp; CODE     
+    <td>0，8，0
+  <tr>
+    <td>LCM
+    <td>颜色矩阵
+    <td>1，3，12
+  <tr>
+    <td>LLM
+    <td>光源矩阵
+    <td>1，3，12
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>RGBn
+    <td>RGB FIFO&nbsp;&nbsp; Rn，Gn，Bn，CDn     
+    <td>0，8，0
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>颜色向量
+    <td>1，11，4
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>颜色向量
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>计算：
+  <tr>
+    <td>和NCS一样，但是重复V1和V2
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>NCDS
+    <td>19
+    <td>cop2 0x0E80413
+    <td>法颜色深度化
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>V0
+    <td>法颜色
+    <td>1，3，12
+  <tr>
+    <td>BK
+    <td>背景颜色 RGB，GBK，RBK     
+    <td>1，19，12
+  <tr>
+    <td>RGB
+    <td>主颜色&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; R，G，B，CODE     
+    <td>0，8，0
+  <tr>
+    <td>LCM
+    <td>颜色矩阵
+    <td>1，3，12
+  <tr>
+    <td>LLM
+    <td>光源矩阵
+    <td>1，3，12
+  <tr>
+    <td>IR0
+    <td>插值值
+    <td>1，3，12
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>RGBn
+    <td>RGB FIFO&nbsp;&nbsp; Rn，Gn，Bn，CDn     
+    <td>0，8，0
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>颜色向量
+    <td>1，11，4
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>颜色向量
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算：
+  <tr>
+    <td>1,19,12
+    <td>MAC1=A1[L11*VX0 + L12*VY0 + 
+      L13*VZ0]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC2=A2[L21*VX0 + L22*VY0 + 
+      L23*VZ0]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC3=A3[L31*VX0 + L32*VY0 + 
+      L33*VZ0]
+    <td>1,19,24
+  <tr>
+    <td>1,3,12
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,19,12
+    <td>MAC1=A1[RBK + LR1*IR1 + 
+      LR2*IR2 + LR3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC2=A2[GBK + LG1*IR1 + 
+      LG2*IR2 + LG3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC3=A3[BBK + LB1*IR1 + 
+      LB2*IR2 + LB3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,3,12
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,27,4
+    <td>MAC1=A1[R*IR1 + 
+      IR0*(Lm_B1[RFC-R*IR1])]
+    <td>1,27,16&nbsp; lm=0     
+  <tr>
+    <td>1,27,4
+    <td>MAC2=A1[G*IR2 + 
+      IR0*(Lm_B2[GFC-G*IR2])]
+    <td>1,27,16&nbsp; lm=0     
+  <tr>
+    <td>1,27,4
+    <td>MAC3=A1[B*IR3 + 
+      IR0*(Lm_B3[BFC-B*IR3])]
+    <td>1,27,16&nbsp; lm=0     
+  <tr>
+    <td>1,3,12
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm＝1     
+  <tr>
+    <td>1,3,12
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm＝1     
+  <tr>
+    <td>1,3,12
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm＝1     
+  <tr>
+    <td>0,8,0
+    <td>Cd0&lt;-Cd1&lt;-Cd2&lt;- CODE
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>R0&lt;-R1&lt;-R2&lt;- Lm_C1[MAC1]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>G0&lt;-G1&lt;-G2&lt;- 
+      Lm_C2[MAC2]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>B0&lt;-B1&lt;-B2&lt;- 
+      Lm_C3[MAC3]
+    <td>1,27,4
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>NCDT
+    <td>44
+    <td>cop2 0x0F80416
+    <td>法颜色深度化V0，V1，V2
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>V0
+    <td>法颜色
+    <td>1，3，12
+  <tr>
+    <td>V1
+    <td>法颜色
+    <td>1，3，12
+  <tr>
+    <td>V2
+    <td>法颜色
+    <td>1，3，12
+  <tr>
+    <td>BK
+    <td>背景颜色 RGB，GBK，RBK     
+    <td>1，19，12
+  <tr>
+    <td>FC
+    <td>远颜色&nbsp;&nbsp; RFC，GFC，RFC     
+    <td>1，27，4
+  <tr>
+    <td>RGB
+    <td>主颜色&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; R，G，B，CODE     
+    <td>0，8，0
+  <tr>
+    <td>LCM
+    <td>颜色矩阵
+    <td>1，3，12
+  <tr>
+    <td>LLM
+    <td>光源矩阵
+    <td>1，3，12
+  <tr>
+    <td>IR0
+    <td>插值值
+    <td>1，3，12
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>RGBn
+    <td>RGB FIFO&nbsp;&nbsp; Rn，Gn，Bn，CDn     
+    <td>0，8，0
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>颜色向量
+    <td>1，11，4
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>颜色向量
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>计算：
+  <tr>
+    <td>和NCDS一样，但是重复V1和V2
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>NCCS
+    <td>17
+    <td>cop2 0x108041B
+    <td>带颜色的法颜色
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>V0
+    <td>法颜色
+    <td>1，3，12
+  <tr>
+    <td>BK
+    <td>背景颜色 RGB，GBK，RBK     
+    <td>1，19，12
+  <tr>
+    <td>RGB
+    <td>主颜色&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; R，G，B，CODE     
+    <td>0，8，0
+  <tr>
+    <td>LCM
+    <td>颜色矩阵
+    <td>1，3，12
+  <tr>
+    <td>LLM
+    <td>光源矩阵
+    <td>1，3，12
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>RGBn
+    <td>RGB FIFO&nbsp;&nbsp; Rn，Gn，Bn，CDn     
+    <td>0，8，0
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>颜色向量
+    <td>1，11，4
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>颜色向量
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算：
+  <tr>
+    <td>1,19,12
+    <td>MAC1=A1[L11*VX0 + L12*VY0 + 
+      L13*VZ0]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC2=A2[L21*VX0 + L22*VY0 + 
+      L23*VZ0]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC3=A3[L31*VX0 + L32*VY0 + 
+      L33*VZ0]
+    <td>1,19,24
+  <tr>
+    <td>1,3,12
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,19,12
+    <td>MAC1=A1[RBK + LR1*IR1 + 
+      LR2*IR2 + LR3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC2=A2[GBK + LG1*IR1 + 
+      LG2*IR2 + LG3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC3=A3[BBK + LB1*IR1 + 
+      LB2*IR2 + LB3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,3,12
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,27,4
+    <td>MAC1=A1[R*IR1]
+    <td>1,27,16
+  <tr>
+    <td>1,27,4
+    <td>MAC2=A2[G*IR2]
+    <td>1,27,16
+  <tr>
+    <td>1,27,4
+    <td>MAC3=A3[B*IR3]
+    <td>1,27,16
+  <tr>
+    <td>1,3,12
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm＝1     
+  <tr>
+    <td>1,3,12
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm＝1     
+  <tr>
+    <td>1,3,12
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm＝1     
+  <tr>
+    <td>0,8,0
+    <td>Cd0&lt;-Cd1&lt;-Cd2&lt;- CODE
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>R0&lt;-R1&lt;-R2&lt;- Lm_C1[MAC1]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>G0&lt;-G1&lt;-G2&lt;- 
+      Lm_C2[MAC2]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>B0&lt;-B1&lt;-B2&lt;- 
+      Lm_C3[MAC3]
+    <td>1,27,4
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>NCCT
+    <td>39
+    <td>cop2 0x118043F
+    <td>带颜色的法颜色V0，V1，V2
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>V0
+    <td>法向量
+    <td>1，3，12
+  <tr>
+    <td>V1
+    <td>法向量
+    <td>1，3，12
+  <tr>
+    <td>V2
+    <td>法向量
+    <td>1，3，12
+  <tr>
+    <td>BK
+    <td>背景颜色 RGB，GBK，RBK     
+    <td>1，19，12
+  <tr>
+    <td>RGB
+    <td>主颜色&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; R，G，B，CODE     
+    <td>0，8，0
+  <tr>
+    <td>LCM
+    <td>颜色矩阵
+    <td>1，3，12
+  <tr>
+    <td>LLM
+    <td>光源矩阵
+    <td>1，3，12
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>RGBn
+    <td>RGB FIFO&nbsp;&nbsp; Rn，Gn，Bn，CDn     
+    <td>0，8，0
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>颜色向量
+    <td>1，11，4
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>颜色向量
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>计算：
+  <tr>
+    <td>和NCCS一样，但是重复V1和V2
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>CDP
+    <td>13
+    <td>cop2 0x1280414
+    <td>颜色深度查询
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>向量
+    <td>1，3，12
+  <tr>
+    <td>RGB
+    <td>主颜色&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; R，G，B，CODE     
+    <td>0，8，0
+  <tr>
+    <td>IR0
+    <td>插值值
+    <td>1，3，12
+  <tr>
+    <td>BK
+    <td>背景颜色 RGB，GBK，RBK     
+    <td>1，19，12
+  <tr>
+    <td>LCM
+    <td>颜色矩阵
+    <td>1，3，12
+  <tr>
+    <td>FC
+    <td>远颜色&nbsp;&nbsp; RFC，GFC，RFC     
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>RGBn
+    <td>RGB FIFO&nbsp;&nbsp; Rn，Gn，Bn，CDn     
+    <td>0，8，0
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>颜色向量
+    <td>1，11，4
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>颜色向量
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算：
+  <tr>
+    <td>1,19,12
+    <td>MAC1=A1[RBK + LR1*IR1 + 
+      LR2*IR2 + LR3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC2=A2[GBK + LG1*IR1 + 
+      LG2*IR2 + LG3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC3=A3[BBK + LB1*IR1 + 
+      LB2*IR2 + LB3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,3,12
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,27,4
+    <td>MAC1=A1[R*IR1 + 
+      IR0*(Lm_B1[RFC-R*IR1])]
+    <td>1,27,16&nbsp; lm=0     
+  <tr>
+    <td>1,27,4
+    <td>MAC2=A2[G*IR2 + IR0*(Lm_B2[GFC-G*IR2])]
+    <td>1,27,16&nbsp; lm=0     
+  <tr>
+    <td>1,27,4
+    <td>MAC3=A3[B*IR3 + 
+      IR0*(Lm_B3[BFC-B*IR3])]
+    <td>1,27,16&nbsp; lm=0     
+  <tr>
+    <td>1,3,12
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm＝1     
+  <tr>
+    <td>1,3,12
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm＝1     
+  <tr>
+    <td>1,3,12
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm＝1     
+  <tr>
+    <td>0,8,0
+    <td>Cd0&lt;-Cd1&lt;-Cd2&lt;- CODE
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>R0&lt;-R1&lt;-R2&lt;- Lm_C1[MAC1]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>G0&lt;-G1&lt;-G2&lt;- 
+      Lm_C2[MAC2]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>B0&lt;-B1&lt;-B2&lt;- 
+      Lm_C3[MAC3]
+    <td>1,27,4
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>CC
+    <td>11
+    <td>cop2 0x138041C
+    <td>从光源向量和一个基本颜色计算一个颜色
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>向量
+    <td>1，3，12
+  <tr>
+    <td>BK
+    <td>背景颜色 RGB，GBK，RBK     
+    <td>1，19，12
+  <tr>
+    <td>RGB
+    <td>主颜色&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; R，G，B，CODE     
+    <td>0，8，0
+  <tr>
+    <td>LCM
+    <td>颜色矩阵
+    <td>1，3，12
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>RGBn
+    <td>RGB FIFO&nbsp;&nbsp; Rn，Gn，Bn，CDn     
+    <td>0，8，0
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>颜色向量
+    <td>1，11，4
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>颜色向量
+    <td>1，27，4
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算：
+  <tr>
+    <td>1,19,12
+    <td>MAC1=A1[RBK + LR1*IR1 + 
+      LR2*IR2 + LR3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC2=A2[GBK + LG1*IR1 + 
+      LG2*IR2 + LG3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,19,12
+    <td>MAC3=A3[BBK + LB1*IR1 + 
+      LB2*IR2 + LB3*IR3]
+    <td>1,19,24
+  <tr>
+    <td>1,3,12
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,3,12
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,19,12&nbsp;&nbsp;&nbsp;      
+      lm＝1
+  <tr>
+    <td>1,27,4
+    <td>MAC1=A1[R*IR1]
+    <td>1,27,16
+  <tr>
+    <td>1,27,4
+    <td>MAC2=A2[G*IR2]
+    <td>1,27,16
+  <tr>
+    <td>1,27,4
+    <td>MAC3=A3[B*IR3]
+    <td>1,27,16
+  <tr>
+    <td>1,3,12
+    <td>IR1= Lm_B1[MAC1]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm＝1     
+  <tr>
+    <td>1,3,12
+    <td>IR2= Lm_B2[MAC2]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm＝1     
+  <tr>
+    <td>1,3,12
+    <td>IR3= Lm_B3[MAC3]
+    <td>1,27,4&nbsp;&nbsp;&nbsp; lm＝1     
+  <tr>
+    <td>0,8,0
+    <td>Cd0&lt;-Cd1&lt;-Cd2&lt;- CODE
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>R0&lt;-R1&lt;-R2&lt;- Lm_C1[MAC1]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>G0&lt;-G1&lt;-G2&lt;- 
+      Lm_C2[MAC2]
+    <td>1,27,4
+  <tr>
+    <td>0,8,0
+    <td>B0&lt;-B1&lt;-B2&lt;- 
+      Lm_C3[MAC3]
+    <td>1,27,4
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>NCLIP
+    <td>8
+    <td>cop2 0x1400006
+    <td>法向剪切
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>SXY0,SXY1,SXY2
+    <td>屏幕坐标
+    <td>1，15，0
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>MAC0
+    <td>SXY1和SXY2的外积，SXY0保持原状
+    <td>1，31，0
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算：
+  <tr>
+    <td>1,31,0
+    <td>MAC0 = 
+      F[SX0*SY1+SX1*SY2+SX2*SY0-SX0*SY2-SX1*SY0-SX2*SY1]
+    <td>1,43,0
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>AVSZ3
+    <td>5
+    <td>cop2 0x158002D
+    <td>3个Z值平均
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>SZ1,SZ2,SZ3
+    <td>Z值
+    <td>0，16，0
+  <tr>
+    <td>ZSF3
+    <td>除数
+    <td>1，3，12
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>OTZ
+    <td>平均
+    <td>0，16，0
+  <tr>
+    <td>MAC0
+    <td>平均
+    <td>1，31，0
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算：
+  <tr>
+    <td>1,31,0
+    <td>MAC0=F[ZSF3*SZ1 + ZSF3*SZ2 + 
+      ZSF3*SZ3]
+    <td>1,31,12
+  <tr>
+    <td>0,16,0
+    <td>OTZ=Lm_D[MAC0]
+    <td>1,31,0
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>AVSZ4
+    <td>6
+    <td>cop2 0x168002E
+    <td>4个Z值平均
+  <tr>
+    <td>字段
+    <td colspan="3">无
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>SZ1,SZ2,SZ3,SZ4
+    <td>Z值
+    <td>0，16，0
+  <tr>
+    <td>ZSF4
+    <td>除数
+    <td>1，3，12
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>OTZ
+    <td>平均
+    <td>0，16，0
+  <tr>
+    <td>MAC0
+    <td>平均
+    <td>1，31，0
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算：
+  <tr>
+    <td>1,31,0
+    <td>MAC0=F[ZSF4*SZ0 + ZSF4*SZ1 + 
+      ZSF4*SZ2 + ZSF4*SZ3]
+    <td>1,31,12
+  <tr>
+    <td>0,16,0
+    <td>OTZ=Lm_D[MAC0]
+    <td>1,31,0
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>OP
+    <td>6
+    <td>cop2 0x170000C
+    <td>外积
+  <tr>
+    <td>字段
+    <td colspan="3">sf
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>[R11R12,R22R23,R33]
+    <td>向量1
+    <td>　
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>向量2
+    <td>　
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>外积
+    <td>　
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>外积
+    <td>　
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算：(D1=R11R12,D2=R22R23,D3=R33)
+  <tr>
+    <td>　
+    <td>MAC1=A1[D2*IR3 - D3*IR2]     
+    <td>　
+  <tr>
+    <td>　
+    <td>MAC2=A2[D3*IR1 - D1*IR3]     
+    <td>　
+  <tr>
+    <td>　
+    <td>MAC3=A3[D1*IR2 - D2*IR1]     
+    <td>　
+  <tr>
+    <td>　
+    <td>IR1=Lm_B1[MAC1]
+    <td>　
+  <tr>
+    <td>　
+    <td>IR2=Lm_B2[MAC2]
+    <td>　
+  <tr>
+    <td>　
+    <td>IR3=Lm_B3[MAC3]
+    <td>　
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>GPF
+    <td>6
+    <td>cop2 0x190003D
+    <td>通用目的插值
+  <tr>
+    <td>字段
+    <td colspan="3">sf
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>IR0
+    <td>缩放因子
+    <td>　
+  <tr>
+    <td>CODE
+    <td>RGB代码段
+    <td>　
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>向量
+    <td>　
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>向量
+    <td>　
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>向量
+    <td>　
+  <tr>
+    <td>RGB2
+    <td>RGB信息
+    <td>　
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算：
+  <tr>
+    <td>　
+    <td>MAC1=A1[IR0 * IR1]     
+    <td>　
+  <tr>
+    <td>　
+    <td>MAC2=A2[IR0 * IR2]     
+    <td>　
+  <tr>
+    <td>　
+    <td>MAC3=A3[IR0 * IR3]     
+    <td>　
+  <tr>
+    <td>　
+    <td>IR1=Lm_B1[MAC1]
+    <td>　
+  <tr>
+    <td>　
+    <td>IR2=Lm_B2[MAC2]
+    <td>　
+  <tr>
+    <td>　
+    <td>IR3=Lm_B3[MAC3]
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>Cd0&lt;-Cd1&lt;-Cd2&lt;- CODE
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>R0&lt;-R1&lt;-R2&lt;- Lm_C1[MAC1]
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>G0&lt;-G1&lt;-G2&lt;- 
+      Lm_C2[MAC2]
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>B0&lt;-B1&lt;-B2&lt;- 
+      Lm_C3[MAC3]
+    <td>　
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td>名称
+    <td>周期
+    <td>命令
+    <td>描述
+  <tr>
+    <td>GPL
+    <td>5
+    <td>cop2 0x1A0003E
+    <td>通用目的插值
+  <tr>
+    <td>字段
+    <td colspan="3">sf
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输入
+  <tr>
+    <td>IR0
+    <td>缩放因子
+    <td>　
+  <tr>
+    <td>CODE
+    <td>RGB代码段
+    <td>　
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>向量
+    <td>　
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>向量
+    <td>　
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">输出
+  <tr>
+    <td>[IR1,IR2,IR3]
+    <td>向量
+    <td>　
+  <tr>
+    <td>[MAC1,MAC2,MAC3]
+    <td>向量
+    <td>　
+  <tr>
+    <td>RGB2
+    <td>RGB信息
+    <td>　
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="3">计算：
+  <tr>
+    <td>　
+    <td>MAC1=A1[MAC1 + IR0 * IR1]     
+    <td>　
+  <tr>
+    <td>　
+    <td>MAC2=A2[MAC2 + IR0 * IR2]     
+    <td>　
+  <tr>
+    <td>　
+    <td>MAC3=A3[MAC3 + IR0 * IR3]     
+    <td>　
+  <tr>
+    <td>　
+    <td>IR1=Lm_B1[MAC1]
+    <td>　
+  <tr>
+    <td>　
+    <td>IR2=Lm_B2[MAC2]
+    <td>　
+  <tr>
+    <td>　
+    <td>IR3=Lm_B3[MAC3]
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>Cd0&lt;-Cd1&lt;-Cd2&lt;- CODE
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>R0&lt;-R1&lt;-R2&lt;- Lm_C1[MAC1]
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>G0&lt;-G1&lt;-G2&lt;- 
+      Lm_C2[MAC2]
+    <td>　
+  <tr>
+    <td>0,8,0
+    <td>B0&lt;-B1&lt;-B2&lt;- 
+      Lm_C3[MAC3]
+    <td>　
+</table>
+<h5>　</h5>
+<h5>字段描述</h5>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>24&nbsp;&nbsp; 20     
+    <td>19
+    <td>18&nbsp;&nbsp; 17     
+    <td>16&nbsp;&nbsp; 15     
+    <td>14&nbsp;&nbsp; 13     
+    <td>12&nbsp;&nbsp; 11     
+    <td>10
+    <td>9&nbsp;&nbsp;&nbsp;&nbsp; 0     
+  <tr>
+    <td>　
+    <td>sf
+    <td>mx
+    <td>v
+    <td>cv
+    <td>　
+    <td>lm
+    <td>　
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td rowspan="2">sf
+    <td>0
+    <td>向量格式（1，31，0）
+  <tr>
+    <td>1
+    <td>向量格式（1，19，12）
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td rowspan="4">mx
+    <td>0
+    <td>乘以旋转矩阵
+  <tr>
+    <td>1
+    <td>乘以光源矩阵
+  <tr>
+    <td>2
+    <td>乘以颜色矩阵
+  <tr>
+    <td>3
+    <td>未知
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td rowspan="4">v
+    <td>0
+    <td>V0 源矩阵（短）     
+  <tr>
+    <td>1
+    <td>V1 源矩阵（短）     
+  <tr>
+    <td>2
+    <td>V2 源矩阵（短）     
+  <tr>
+    <td>3
+    <td>IR 源矩阵（长）     
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td rowspan="4">cv
+    <td>0
+    <td>加平移向量
+  <tr>
+    <td>1
+    <td>加背景颜色向量
+  <tr>
+    <td>2
+    <td>未知
+  <tr>
+    <td>3
+    <td>不加向量
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td rowspan="2">lm
+    <td>0
+    <td>没有负值限制
+  <tr>
+    <td>1
+    <td>限制负值到0
+</table>
+<h5></h5>
+<h5>通用MVMVA指令列表</h5>
+
+<table border="1" cellspacing="0">
+  <tr>
+    <td>
+      名称
+    <td>
+      周期数
+    <td>
+      命令
+    <td>
+      描述
+  <tr>
+    <td>
+      rtv0
+    <td>
+      -
+    <td>
+      cop2 
+      0x0486012
+    <td>
+      v0×旋转矩阵
+  <tr>
+    <td>
+      rtv1
+    <td>
+      -
+    <td>
+      cop2 
+      0x048E012
+    <td>
+      v1×旋转矩阵
+  <tr>
+    <td>
+      rtv2
+    <td>
+      -
+    <td>
+      cop2 
+      0x0496012
+    <td>
+      v2×旋转矩阵
+  <tr>
+    <td>
+      rtir12
+    <td>
+      -
+    <td>
+      cop2 
+      0x049E012
+    <td>
+      ir×旋转矩阵
+  <tr>
+    <td>
+      rtir0
+    <td>
+      -
+    <td>
+      cop2 
+      0x041E012
+    <td>
+      ir×旋转矩阵
+  <tr>
+    <td>
+      rtv0tr
+    <td>
+      -
+    <td>
+      cop2 
+      0x0480012
+    <td>
+      v0×旋转矩阵＋平移向量
+  <tr>
+    <td>
+      rtv1tr
+    <td>
+      -
+    <td>
+      cop2 
+      0x0488012
+    <td>
+      v1×旋转矩阵＋平移向量
+  <tr>
+    <td>
+      rtv2tr
+    <td>
+      -
+    <td>
+      cop2 
+      0x0490012
+    <td>
+      v2×旋转矩阵＋平移向量
+  <tr>
+    <td>
+      rtirtr
+    <td>
+      -
+    <td>
+      cop2 
+      0x0498012
+    <td>
+      ir×旋转矩阵＋平移向量
+  <tr>
+    <td>
+      rtv0bk
+    <td>
+      -
+    <td>
+      cop2 
+      0x0482012
+    <td>
+      v0×旋转矩阵＋背景向量
+  <tr>
+    <td>
+      rtv1bk
+    <td>
+      -
+    <td>
+      cop2 
+      0x048A012
+    <td>
+      v1×旋转矩阵＋背景向量
+  <tr>
+    <td>
+      rtv2bk
+    <td>
+      -
+    <td>
+      cop2 
+      0x0492012
+    <td>
+      v2×旋转矩阵＋背景向量
+  <tr>
+    <td>
+      rtirbk
+    <td>
+      -
+    <td>
+      cop2 
+      0x049A012
+    <td>
+      ir×旋转矩阵＋背景向量
+  <tr>
+    <td>
+      ll
+    <td>
+      -
+    <td>
+      cop2 
+      0x04A6412
+    <td>
+      v0×光源矩阵。下限为0
+  <tr>
+    <td>
+      llv0
+    <td>
+      -
+    <td>
+      cop2 
+      0x04A6012
+    <td>
+      v0×光源矩阵
+  <tr>
+    <td>
+      llv1
+    <td>
+      -
+    <td>
+      cop2 
+      0x04AE012
+    <td>
+      v1×光源矩阵
+  <tr>
+    <td>
+      llv2
+    <td>
+      -
+    <td>
+      cop2 
+      0x04B6012
+    <td>
+      v2×光源矩阵
+  <tr>
+    <td>
+      llvir
+    <td>
+      -
+    <td>
+      cop2 
+      0x04BE012
+    <td>
+      ir×光源矩阵
+  <tr>
+    <td>
+      llv0tr
+    <td>
+      -
+    <td>
+      cop2 
+      0x04A0012
+    <td>
+      v0×光源矩阵＋平移矩阵
+  <tr>
+    <td>
+      llv1tr
+    <td>
+      -
+    <td>
+      cop2 
+      0x04A8012
+    <td>
+      v1×光源矩阵＋平移矩阵
+  <tr>
+    <td>
+      llv2tr
+    <td>
+      -
+    <td>
+      cop2 
+      0x04B0012
+    <td>
+      v2×光源矩阵＋平移矩阵
+  <tr>
+    <td>
+      llirtr
+    <td>
+      -
+    <td>
+      cop2 
+      0x04B8012
+    <td>
+      ir×光源矩阵＋平移矩阵
+  <tr>
+    <td>
+      llv0bk
+    <td>
+      -
+    <td>
+      cop2 
+      0x04A2012
+    <td>
+      v0×光源矩阵＋背景向量
+  <tr>
+    <td>
+      llv1bk
+    <td>
+      -
+    <td>
+      cop2 
+      0x04AA012
+    <td>
+      v1×光源矩阵＋背景向量
+  <tr>
+    <td>
+      llv2bk
+    <td>
+      -
+    <td>
+      cop2 
+      0x04B2012
+    <td>
+      v2×光源矩阵＋背景向量
+  <tr>
+    <td>
+      llirbk
+    <td>
+      -
+    <td>
+      cop2 
+      0x04BA012
+    <td>
+      ir×光源矩阵＋背景向量
+  <tr>
+    <td>
+      lc
+    <td>
+      -
+    <td>
+      cop2 
+      0x04DA412
+    <td>
+      v0×颜色矩阵。下限为0
+  <tr>
+    <td>
+      lcv0
+    <td>
+      -
+    <td>
+      cop2 
+      0x04C6012
+    <td>
+      v0×颜色矩阵
+  <tr>
+    <td>
+      lcv1
+    <td>
+      -
+    <td>
+      cop2 
+      0x04CE012
+    <td>
+      v1×颜色矩阵
+  <tr>
+    <td>
+      lcv2
+    <td>
+      -
+    <td>
+      cop2 
+      0x04D6012
+    <td>
+      v2×颜色矩阵
+  <tr>
+    <td>
+      lcvir
+    <td>
+      -
+    <td>
+      cop2 
+      0x04DE012
+    <td>
+      ir×颜色矩阵
+  <tr>
+    <td>
+      lcv0tr
+    <td>
+      -
+    <td>
+      cop2 
+      0x04C0012
+    <td>
+      v0×颜色矩阵＋平移矩阵
+  <tr>
+    <td>
+      lcv1tr
+    <td>
+      -
+    <td>
+      cop2 
+      0x04C8012
+    <td>
+      v1×颜色矩阵＋平移矩阵
+  <tr>
+    <td>
+      lcv2tr
+    <td>
+      -
+    <td>
+      cop2 
+      0x04D0012
+    <td>
+      v2×颜色矩阵＋平移矩阵
+  <tr>
+    <td>
+      lcirtr
+    <td>
+      -
+    <td>
+      cop2 
+      0x04D8012
+    <td>
+      ir×颜色矩阵＋平移矩阵
+  <tr>
+    <td>
+      lev0bk
+    <td>
+      -
+    <td>
+      cop2 
+      0x04C2012
+    <td>
+      v0×颜色矩阵＋平移矩阵
+  <tr>
+    <td>
+      lev1bk
+    <td>
+      -
+    <td>
+      cop2 
+      0x04CA012
+    <td>
+      v1×颜色矩阵＋平移矩阵
+  <tr>
+    <td>
+      lev2bk
+    <td>
+      -
+    <td>
+      cop2 
+      0x04D2012
+    <td>
+      v2×颜色矩阵＋平移矩阵
+  <tr>
+    <td>
+      leirbk
+    <td>
+      -
+    <td>
+      cop2 
+      0x04DA012
+    <td>
+      ir×颜色矩阵＋平移矩阵
+</table>
+<h5>　</h5>
+<h5>其他指令</h5>
+
+<table border="1" cellspacing="0">
+  <tr>
+    <td>
+      名称
+    <td>
+      周期数
+    <td>
+      命令
+    <td>
+      描述
+    <td>
+      格式
+  <tr>
+    <td>
+      sqr12
+    <td>
+      -
+    <td>
+      cop2 
+      0x0A80428
+    <td>
+      ir平方
+    <td>
+      1,19,12
+  <tr>
+    <td>
+      sqr0
+    <td>
+      -
+    <td>
+      cop2 
+      0x0A80428
+    <td>
+      ir平方
+    <td>
+      1,31, 0   
+  <tr>
+    <td>
+      op12
+    <td>
+      -
+    <td>
+      cop2 
+      0x178000C
+    <td>
+      外积
+    <td>
+      1,19,12
+  <tr>
+    <td>
+      op0
+    <td>
+      -
+    <td>
+      cop2 
+      0x170000C
+    <td>
+      外积
+    <td>
+      1,31, 0   
+  <tr>
+    <td>
+      gpf12
+    <td>
+      -
+    <td>
+      cop2 
+      0x198003D
+    <td>
+      通用目的插值
+    <td>
+      1,19,12
+  <tr>
+    <td>
+      gpf0
+    <td>
+      -
+    <td>
+      cop2 
+      0x190003D
+    <td>
+      通用目的插值
+    <td>
+      1,31, 0  
+  <tr>
+    <td>
+      gpl12
+    <td>
+      -
+    <td>
+      cop2 
+      0x1A8003E
+    <td>
+      通用目的插值
+    <td>
+      1,19,12
+  <tr>
+    <td>
+      gpl0
+    <td>
+      -
+    <td>
+      cop2 
+      0x1A0003E
+    <td>
+      通用目的插值
+    <td>
+      1,31, 0  
+</table>

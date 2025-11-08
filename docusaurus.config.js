@@ -55,6 +55,7 @@ const config = {
           showLastUpdateTime: true,
         },
         blog: {
+          blogSidebarTitle: '日志列表',
           showReadingTime: true,
           showLastUpdateTime: true,
           feedOptions: {
@@ -119,7 +120,23 @@ const config = {
             position: 'left',
             label: '文档',
           },
-          {to: '/blog', label: '更新日志', position: 'left'},
+          {
+            type: 'dropdown',
+            label: '更新日志',
+            position: 'left',
+            items: [
+              {
+                to: '/blog',
+                label:'主页',
+                id: 'blog1',
+              },
+              {
+                to: '/blog/archive',
+                label:'全部日志',
+                id: 'blog2',
+              },
+            ],
+          },
           {
             href: 'https://github.com/Little-Data/Gametoolkit',
             label: 'GitHub',
@@ -128,7 +145,7 @@ const config = {
         ],
       },
       footer: {
-        style: 'dark',
+        style: 'light',
         copyright: `${new Date().getFullYear()} <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank" rel="noreferrer noopener">CC BY-NC-SA 署名—非商业性使用—相同方式共享</a> Built with Docusaurus<br/>所有文档及其它资源收集于互联网，无法准确知晓作者。如有问题可到Github提出issue`,
       },
       prism: {

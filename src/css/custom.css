@@ -35,3 +35,48 @@
   font-size:20px;
   font-weight:700
 }
+
+/* 黑幕效果 */
+.heimu,
+.heimu rt {
+  background-color: #252525
+}
+.heimu,
+.heimu a,
+a .heimu,
+a.new .heimu,
+span.heimu a.external,
+span.heimu a.external:visited,
+span.heimu a.extiw,
+span.heimu a.extiw:visited,
+span.heimu a.mw-disambig,
+span.heimu a.mw-redirect,
+span.heimu a.new {
+  transition: color .13s linear;
+  color: #252525;
+  text-shadow: none
+}
+span.heimu:active,
+span.heimu:hover {
+  color: #fff
+}
+a:hover span.heimu,
+span.heimu:hover a {
+  color: #add8e6
+}
+a:visited:hover span.heimu,
+span.heimu:hover a:visited {
+  color: #c5cae9
+}
+a.new:hover span.heimu,
+span.heimu:hover a.new {
+  color: #fcc
+}
+a.new:hover:visited span.heimu,
+span.heimu a.new:hover:visited {
+  color: #ef9a9a
+}
+a.extiw:visited:hover span.heimu,
+span.heimu:hover a.extiw:visited {
+  color: #d1c4e9
+}

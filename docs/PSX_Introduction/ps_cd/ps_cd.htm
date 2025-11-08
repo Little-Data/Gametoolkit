@@ -1,0 +1,1209 @@
+
+
+<head>
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+</head>
+
+<h1><font color="#FF0000">PS_CD资料</font></h1>
+<p align="right"><font color="#FF00FF">整理：Pinocchio</font>
+<h3><font color="#FF00FF">PS_CD布局</font></h3>
+<p>PS的CD由一个数据轨和后续若干个音轨组成。例：
+<table border="1" cellspacing="0">
+  <tr>
+    <td>块
+    <td>描述
+    <td>额外信息
+  <tr>
+    <td>000000-000015
+    <td>数据轨引导块
+    <td>共16个扇区
+  <tr>
+    <td>000016-024520
+    <td>数据轨程序区
+    <td>Mode2 Form1或2  
+  <tr>
+    <td>024521-024670
+    <td>数据轨后空隙
+    <td>最少150扇区
+  <tr>
+    <td>024671-024820
+    <td>第1音轨前间隙
+    <td>最少150扇区
+  <tr>
+    <td>024821-048326
+    <td>音轨#1
+    <td>　
+  <tr>
+    <td>048327-048476
+    <td>第2音轨前间隙
+    <td>0或150扇区
+  <tr>
+    <td>048477-072485
+    <td>音轨#2
+    <td>　
+  <tr>
+    <td>. .<br>  
+      . .<br>  
+      . .  
+    <td>　
+    <td>　
+  <tr>
+    <td>191281-191430
+    <td>第9音轨前间隙
+    <td>　
+  <tr>
+    <td>191431-214349
+    <td>音轨9
+    <td>　
+  <tr>
+    <td>214350-??????
+    <td>导出轨
+    <td>由刻录机写入，不可读
+</table>
+<p>CD-ROM盘上可以存放信息的区域称为卷空间(volume space)。卷空间分成两个区：  
+<p>从LSN 0到LSN 15称为系统区。从LSN 16开始到最后一个逻辑扇区称为数据区，  
+<p>它用来记录卷描述符(volume descriptors)、文件目录、路径表、文件数据等内容。  
+<p>　
+<h3><font color="#FF00FF">系统区</font></h3>
+<p>前16个扇区是系统区，有的raw镜像在最前面还包含有光盘导入轨，是一片连续的空白扇区，忽略它。
+<p>PS检查轨道1的头5个扇区来判断国家区域。共有3种区域码。JAP、EUR、USA。相关文件请在文档页查看。
+<p>　<h3><font color="#FF00FF">数据区</font></h3>
+<h5>卷描述：</h5>
+<p>每卷数据区的开头(LSN 16)是卷描述符。卷描述符实际上是一种数据结构，或者说是一种描述表。  
+<p>其中的内容用来说明整个CD-ROM盘的结构、提供许多非常重要的信息，如盘上的逻辑组织、根目录地址、
+<p>路径表的地址和大小、逻辑块的大小等等。卷描述符的结构如下表，它是一个由2048字节组成的固定长度记录。
+<table cellspacing="0" border="1">
+  <tr>
+    <td>字节位置
+    <td>录域的名称
+  <tr>
+    <td>1
+    <td>卷描述符的类型
+  <tr>
+    <td>2～6
+    <td>标准卷标识符(用CD001表示)
+  <tr>
+    <td>7
+    <td>卷描述符的版本号
+  <tr>
+    <td>8～2048
+    <td>(取决于卷描述符的类型)
+</table>
+<p>卷描述符有五种类型：
+<ul>
+  <li>主卷描述符(primary volume descriptor)  
+    <p>辅助卷描述符(supplementary volume descriptor)  
+    <table border="1">
+      <tr>
+        <td><b>字节位置</b>
+        <td><b>主卷描述符记录域的名称</b>
+        <td><b>辅助卷描述符记录域的名称</b>
+      <tr>
+        <td>1
+        <td>卷描述符的类型
+        <td>同左
+      <tr>
+        <td>2～6
+        <td>标准卷标识符(CD001)
+        <td>同左
+      <tr>
+        <td>7
+        <td>卷描述符版本号
+        <td>同左
+      <tr>
+        <td>8
+        <td>未使用(00)
+        <td>卷标志
+      <tr>
+        <td>9～40
+        <td>系统标识符
+        <td>同左
+      <tr>
+        <td>41～72
+        <td>卷标识符
+        <td>同左
+      <tr>
+        <td>73～80
+        <td>未使用(00)
+        <td>同左
+      <tr>
+        <td>81～88
+        <td>卷空间大小
+        <td>同左
+      <tr>
+        <td>89～120
+        <td>未使用(00)
+        <td>换码顺序
+      <tr>
+        <td>121～124
+        <td>卷系列大小
+        <td>同左
+      <tr>
+        <td>125～128
+        <td>卷顺序号
+        <td>同左
+      <tr>
+        <td>129～132
+        <td>逻辑块大小
+        <td>同左
+      <tr>
+        <td>133～140
+        <td>路径表大小
+        <td>同左
+      <tr>
+        <td>141～144L
+        <td>型路径表值位置，L型： 最低有效字节在先  
+        <td>同左
+      <tr>
+        <td>145～148L
+        <td>型路径表任选值位置
+        <td>同左
+      <tr>
+        <td>149～152M
+        <td>型路径表值位置，最高有效字节在先
+        <td>同左
+      <tr>
+        <td>153～156M
+        <td>型路径表任选值位置
+        <td>同左
+      <tr>
+        <td>157～190
+        <td>根目录的目录记录
+        <td>同左
+      <tr>
+        <td>191～318
+        <td>卷集标识符
+        <td>同左
+      <tr>
+        <td>319～446
+        <td>出版商标识符
+        <td>同左
+      <tr>
+        <td>447～574
+        <td>数据准备者标识符
+        <td>同左
+      <tr>
+        <td>575～702
+        <td>应用软件标识符(如CD-I)
+        <td>同左
+      <tr>
+        <td>703～739
+        <td>版权文件标识符
+        <td>同左
+      <tr>
+        <td>740～776
+        <td>文摘标识符
+        <td>同左
+      <tr>
+        <td>777～813
+        <td>文献目录文件标识符
+        <td>同左
+      <tr>
+        <td>814～830
+        <td>卷创作日期和时间
+        <td>同左
+      <tr>
+        <td>831～847
+        <td>卷修改日期和时间
+        <td>同左
+      <tr>
+        <td>848～864
+        <td>卷到期日期和时间
+        <td>同左
+      <tr>
+        <td>865～881
+        <td>卷有效日期和时间
+        <td>同左
+      <tr>
+        <td>882
+        <td>文件结构版本号
+        <td>同左
+      <tr>
+        <td>883
+        <td>(保留)
+        <td>同左
+      <tr>
+        <td>884～1395
+        <td>应用程序使用
+        <td>同左
+      <tr>
+        <td>1396～2048
+        <td>(保留)
+        <td>同左
+    </table>
+    <p>　
+  <li>卷分割描述符(volume partition descriptor)  
+    <table border="1">
+      <tr>
+        <td><b>字节位置</b>
+        <td><b>记录域的名称</b>
+      <tr>
+        <td>1
+        <td>卷描述符的类型
+      <tr>
+        <td>2～6
+        <td>标准卷标识符(CD001)
+      <tr>
+        <td>7
+        <td>卷描述符版本号
+      <tr>
+        <td>8
+        <td>未使用(00)
+      <tr>
+        <td>9～40
+        <td>系统标识符
+      <tr>
+        <td>41～72
+        <td>卷分割标识符
+      <tr>
+        <td>73～80
+        <td>卷分割位置
+      <tr>
+        <td>81～88
+        <td>卷分块大小
+      <tr>
+        <td>89～2048
+        <td>系统使用
+    </table>
+    <p>　
+  <li>引导记录(boot record)  
+    <table border="1">
+      <tr>
+        <td><b>字节位置</b>
+        <td><b>记录域的名称</b>
+      <tr>
+        <td>1
+        <td>卷描述符的类型
+      <tr>
+        <td>2～6
+        <td>标准卷标识符(CD001)
+      <tr>
+        <td>7
+        <td>卷描述符版本号
+      <tr>
+        <td>8～39
+        <td>引导系统标识符
+      <tr>
+        <td>40～71
+        <td>引导标识符
+      <tr>
+        <td>72～2048
+        <td>引导系统使用
+    </table>
+    <p>　
+  <li>卷描述符系列终止符(volume descriptor set terminator)  
+    <table border="1">
+      <tr>
+        <td><b>字节位置</b>
+        <td><b>记录域的名称</b>
+      <tr>
+        <td>1
+        <td>卷描述符的类型
+      <tr>
+        <td>2～6
+        <td>标准卷标识符(CD001)
+      <tr>
+        <td>7
+        <td>卷描述符版本号
+      <tr>
+        <td>8～2048
+        <td>保留(00)
+    </table>
+</ul>
+<p>五种描述符的前四种可以任意组合，组成卷描述符系列。这四个描述符可以在描述符系列中出现不只一次。
+<p>描述符系列有两个限制：主卷描述符至少要出现一次，卷描述符系列终止符只能出现一次，而且只能出现在最后。
+<p>卷描述符系列记录在从LSN 16开始的连续逻辑扇区上。 
+<p>　 
+<h5>目录记录的格式：</h5>
+<p>CD-ROM采用隐式分层目录结构，把目录当作文件看待，并且把整个目录包含在1个或少数几个文件中。</p>
+<p>包含目录的文件称为目录文件。目录文件与普通的用户文件相类似，但对CD-ROM采用的目录文件结构</p>
+<p>作了具体的规定。目录文件由一系列可变长度的目录记录组成。每个目录记录的格式如下表所示。可</p>
+<p>以看到，一个目录记录包含有许多记录域。这些域中记录有文件标识符，以字节计算的文件长度、文</p>
+<p>件域中的第一个逻辑块号(LBN)，以及打开和使用这个文件所需要的其他信息。当一个文件放在多个</p>
+<p>文件域中时，需要设置多个目录记录，每个目录记录中给出相应文件域的地址，并由文件标志记录域</p>
+<p>来指明该文件域是不是最后一个。</p>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>字节位置
+    <td>记录域的名称
+  <tr>
+    <td>1
+    <td>目录记录长度(LEN_DR)
+  <tr>
+    <td>2
+    <td>扩展属性记录(XAR)长度
+  <tr>
+    <td>3～10
+    <td>文件域地址
+  <tr>
+    <td>11～18
+    <td>数据长度
+  <tr>
+    <td>19～25
+    <td>日期和时间
+  <tr>
+    <td>26
+    <td>文件标志
+  <tr>
+    <td>27
+    <td>文件单元大小
+  <tr>
+    <td>28
+    <td>交叉间隔大小
+  <tr>
+    <td>29～32
+    <td>卷顺序号
+  <tr>
+    <td>33
+    <td>文件标识符长度(LEN_FI)
+  <tr>
+    <td>34-(33+LEN_FI)
+    <td>文件标识符
+  <tr>
+    <td>34+LEN_FI
+    <td>填充域
+  <tr>
+    <td>(34+LEN_FI+1)-LEN_DR
+    <td>系统使用(保留)
+</table>
+<p>文件的附加信息可以记录在一个命名为扩展属性记录(extended  
+attribute record，XAR)的记录上，</p>  
+<p>它放在文件的前面而不是放在目录记录上，这样做可以使目录记录变得较小。附加信息包括文件作者、</p>
+<p>文件修改日期、访问文件的许可权等信息。凡是不常使用的信息都放到扩展属性记录上。这也是</p>
+<p>CD-ROM目录结构的一个特点。如果一个文件有多个文件域，每个文件域都有XAR记录，在这些XAR记录</p>
+<p>上的信息可能会不相同，文件系统应认为最后一个XAR记录上的信息是有效的。这个特性在卷集制作</p>
+<p>过程中很有用。由于每个目录记录的长度不确定，因此在一个逻辑扇区中的目录记录的个数也不确定，</p>
+<p>但必须要保证目录记录数的数目为整数。当一个目录在这个逻辑扇区中放不下的时候，应移到后面的</p>
+<p>一个逻辑扇区。这样可以保证读到计算机内存中的目录不会出现支离破碎的现象。</p>
+<p>　</p>
+<h5>路径表记录：</h5>
+<p>路径表由许多称为路径表记录组成，它对应于根目录和每个子目录。每个路径表记录具有下表的格式。</p>
+<p>路径表中包含有每一个子目录所在的开始地址，即逻辑块号LBN，这样就可以通过路径表直接访问任何</p>
+<p>一个子目录。因此，如果一张完整的路径表能保存在计算机的RAM中，那末一次寻找就可以访问盘上的</p>
+<p>任何一个子目录。</p>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>字节位置
+    <td>记录域的名称
+  <tr>
+    <td>1
+    <td>目录标识符的长度(LEN_DI)
+  <tr>
+    <td>2
+    <td>扩展属性记录(XAR)的长度
+  <tr>
+    <td>3～6
+    <td>存放目录的地址
+  <tr>
+    <td>7～8
+    <td>父目录号
+  <tr>
+    <td>9～(8+LEN_DI)
+    <td>目标标识符(不超过31个字符)
+  <tr>
+    <td>(9+LEN_DI)
+    <td>填充域
+</table>
+<p>路径表只能保证访问目录的第一个物理扇区。如果有由成千个文件组成的大目录，那末整个目录可能跨</p>
+<p>越盘上的好几个扇区。这么多的文件最好分散在各个子目录下，每个子目录下分配约40个左右的文件。</p>
+<p>按每个目录记录的平均长度为50字节计算，差不多占据单个物理扇区。如果在一个子目录下分配太多的</p>
+<p>文件数时，那末要找这个目录下的文件时，需要顺序读和检查好几个物理扇区才能找到这个文件，这样</p>
+<p>就多化时间。</p>
+<p>　</p>
+<h3><font color="#FF00FF">扇区类型</font></h3>
+<pre>
+CD数据扇区有三种基本类型，PS使用Mode2 form1或2。
+
+类型 #1: Mode 1
+-----------------------------------------------------
+       0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
+0000h 00 FF FF FF FF FF FF FF FF FF FF 00 [-ADDR-] 01
+0010h [---DATA...
+...
+0800h                                     ...DATA---]
+0810h [---EDC---] 00 00 00 00 00 00 00 00 [---ECC...
+...
+0920h                                      ...ECC---]
+-----------------------------------------------------
+
+类型 #2: Mode 2 (XA), form 1
+-----------------------------------------------------
+       0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
+0000h 00 FF FF FF FF FF FF FF FF FF FF 00 [-ADDR-] 02
+0010h [--FLAGS--] [--FLAGS--] [---DATA...
+...
+0810h             ...DATA---] [---EDC---] [---ECC...
+...
+0920h                                      ...ECC---]
+-----------------------------------------------------
+
+类型 #3: Mode 2 (XA), form 2
+-----------------------------------------------------
+       0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F
+0000h 00 FF FF FF FF FF FF FF FF FF FF 00 [-ADDR-] 02
+0010h [--FLAGS--] [--FLAGS--] [---DATA...
+...
+0920h                         ...DATA---] [---EDC---]
+-----------------------------------------------------
+
+注:
+
+ADDR:  扇区地址，用BCD编码成 分:秒:帧
+FLAGS: 在Mode 2 (XA)扇区中用来描述扇区类型，冗余重复一次
+DATA:  扇区里包含实际数据的区域
+EDC:   Error Detection Code检错码
+ECC:   Error Correction Code纠错码</pre>
+　
+<h5>Mode2扇区:</h5>
+<p>每种扇区开头都是12个字节的同步区、然后是4个字节的子码区和8个字节的副标题。
+<pre>struct
+{
+	BYTE	sync[12]={ 0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0  }; // 在所有的CD-ROM驱动器里同步区都不会被解码
+	struct
+	{
+		BYTE	minutes;	// 相对于碟片开始的时间代码
+		BYTE	seconds;	// 相对于碟片开始的时间代码
+		BYTE	sectors;	// 相对于碟片开始的时间代码
+		BYTE	mode;		// PS_CD扇区是Form 2
+	} header;
+	struct
+	{
+		BYTE	file_number;	// 文件号
+		BYTE	channel;	// 通道号
+		BYTE
+		{
+			bit 7: eof_marker;	// 1 表示文件的最后一个扇区，其它是0
+			bit 6: real_time;	// 1 表示实时模式，参见上面
+			bit 5: form;		// 1 表示ADPCM扇区(form 2, 0 表示form 1)?
+			bit 4: trigger;		// 用于应用程序
+			bit 3: data;		// 对应于扇区类型，1 表示数据M扇区
+			bit 2: audio;		// 对应于扇区类型，1 表示音频扇区
+			bit 1: video;		// 对应于扇区类型，1 表示视频扇区
+			bit 0: end_of_record;	// 表明记录的结束
+		} submode;
+		BYTE
+		{
+			bit 7: reserved;		// =0 ?
+			bit 6: emphasis;
+			bit 5,4: bits_per_sample;	// 00=4bits (B,C 格式) 01=8bits
+			bit 3,2: sample_rate;		// 00=37.8kHz (A,B 格式) 01=18.9kHz
+			bit 1,0: mono_stereo;		// 00=单声道 01=立体声，其他值未用
+		} coding_info;
+		BYTE	copy_of_file_number;	// =文件号
+		BYTE	copy_of_channel;	// =通道
+		BYTE	copy_of_submode;	// =副模式
+		BYTE	copy_of_coding_info;	// =编码信息
+	} subheader;
+	BYTE	user[2328];			// 数据
+	//对于form 1，user里是{data[2048];edc[4];ecc[276]}；
+	//对于form 2，user里是{data[2324];edc[4]}；
+	//其中edc[4]是检错码，ecc[276]是纠错码；
+} mode2_raw_sector;
+</pre>
+<h5><br //adpcm raw扇区<br>
+XA 副标题信息：</h5>  
+<p>
+XA 副标题信息是8个字节，分成重复的2块。<br>  
+<table border="1" cellspacing="0">
+  <tr>
+    <td>字节
+    <td>描述
+  <tr>
+    <td>0
+    <td>文件号
+  <tr>
+    <td>1
+    <td>通道号
+  <tr>
+    <td>2
+    <td>副模式
+  <tr>
+    <td>3
+    <td>编码信息
+  <tr>
+    <td>4
+    <td>文件号
+  <tr>
+    <td>5
+    <td>通道号
+  <tr>
+    <td>6
+    <td>副模式
+  <tr>
+    <td>7
+    <td>编码信息
+</table>
+<p>具体：
+<table border="1" cellspacing="0">
+  <tr>
+    <td>字节/位
+    <td>域
+    <td>描述
+  <tr>
+    <td><font color="#00FF00">字节0</font>
+    <td><font color="#00FF00">文件号</font>
+    <td>　
+  <tr>
+    <td>　
+    <td>　
+    <td>0 = 标准数据文件<br>  
+      1-255 = 交叉存取的  
+  <tr>
+    <td><font color="#00FF00">字节1</font>
+    <td><font color="#00FF00">通道号</font>
+    <td>　
+  <tr>
+    <td>　
+    <td>　
+    <td>对于ADPCM是0-15<br>
+      对于数据/视频是0-31<br>
+      ADPCM数据最多是16个通道，在PS中如果没有倍速CD-ROM会被减到8
+  <tr>
+    <td><font color="#00FF00">字节2</font>
+    <td><font color="#00FF00">副模式</font>
+    <td>　
+  <tr>
+    <td>#7
+    <td>EOF
+    <td>1表示文件尾
+  <tr>
+    <td>#6
+    <td>Real time sector
+    <td>1表示实时模式扇区
+  <tr>
+    <td>#5
+    <td>Form 2
+    <td>　
+  <tr>
+    <td>#4
+    <td>Trigger
+    <td>用于应用程序
+  <tr>
+    <td>#3
+    <td>Data
+    <td>1表示数据扇区
+  <tr>
+    <td>#2
+    <td>Audio
+    <td>1表示音频扇区
+  <tr>
+    <td>#1
+    <td>Video
+    <td>1表示视频扇区
+  <tr>
+    <td>#0
+    <td>EOR
+    <td>1表示记录结束
+  <tr>
+    <td><font color="#00FF00">字节3</font>
+    <td><font color="#00FF00">编码信息</font>
+    <td>　
+  <tr>
+    <td>#7
+    <td>Reserved
+    <td>0
+  <tr>
+    <td>#6
+    <td>Emphasis
+    <td>强调
+  <tr>
+    <td>#5,4
+    <td>Bits per sample
+    <td>00 = 4bit (level B/C)<br>
+      01 = 8bit (level A)
+  <tr>
+    <td>#3,2
+    <td>Sample rate
+    <td>00 = 37.8kHz (level A/B)<br>
+      01 = 18.9kHz (level C)
+  <tr>
+    <td>#1,0
+    <td>mono/stereo
+    <td>00 = 单声道<br>  
+      01 = 立体声  
+</table>
+<p>　
+<h3><font color="#FF00FF">ECC/EDC算法</font></h3>
+<h5>理论：</h5>
+<p>4字节检错码EDC：<font>
+<p>CD-ROM扇区中，有一个4字节共32位的EDC字域，它就是用来存放CRC码。
+<p>CD-ROM的CRC校验码生成多项式是32阶的,P(x) = (x<sup>16</sup>+x<sup>15</sup>+x<sup>2</sup>+1)(x<sup>16</sup>+x<sup>2</sup>+x+1)。  
+<p>计算CRC码时用的数据块是从扇区的开头到用户数据区结束为止的数据字节，以Mode1为例，
+<p>即字节0—2063共2064个字节。将数据加上4个字节0，然后除多项式，得到的余数为校验码。
+<p>在EDC中存放的CRC码的次序如下：
+<table border="1">
+  <tr>
+    <td>EDC：
+    <td>x<sup>24</sup>－x<sup>31</sup>
+    <td>x<sup>16</sup>－x<sup>23</sup>
+    <td>x<sup>8</sup>－x<sup>15</sup>
+    <td>x<sup>0</sup>－x<sup>7</sup>
+  <tr>
+    <td>字节号：
+    <td>2064
+    <td>2065
+    <td>2066
+    <td>2067
+</table>
+<p>　
+<p>276字节纠错码ECC：
+<p>CD-ROM中的数据、地址、校验码等都可以看成是属于GF(2<sup>m</sup>)  
+= GF(2<sup>8</sup>)中的元素或称符号。  
+<p>GF(2<sup>8</sup>)表示域中有256个元素，除0，1之外的254个元素由本原多项式P(x)生成。
+<p>CD-ROM用来构造GF(2<sup>8</sup>)域的P(x)是：P(x)=X<sup>8</sup>+X<sup>4</sup>+X<sup>3</sup>+X<sup>2</sup>+1。
+<p>而GF(2<sup>8</sup>)域中的本原元素为：α = (0 0 0 0 0 0 1 0)。  
+<p>按ISO/IEC10149的规定，CD-ROM扇区中的ECC码采用GF(2<sup>8</sup>)域上的RSPC码产生172个字节
+<p>的P校验符号和104个字节的Q校验符号。在每个扇区中，#12字节到#2075字节和ECC域中
+<p>#2076字节到#2351字节共2340个字节组成1170个字(word)。每个字s(n)由两个字节B组成，
+<p>一个称为最高有效位字节MSB，另一个叫做最低有效位字节LSB。第n个字由下面的字节组成，
+<p>s(n) = MSB［B(2<i>n</i>＋13)］＋LSB［B(2<i>n</i>＋12)］，其中n = 0，1，2，…，1169。  
+<p>从#12字节开始到#2075字节共2064个字节组成的数据块排列成24×43的矩阵，如下所示：
+<table border="1">
+  <tr>
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>N<sub>P</sub>
+    <td>　
+    <td>　
+  <tr>
+    <td>　
+    <td>　
+    <td>0
+    <td>1
+    <td>2
+    <td>3
+    <td>　
+    <td>　
+    <td>41
+    <td>42
+    <td>　
+  <tr>
+    <td>　
+    <td>0
+    <td>000
+    <td>0001
+    <td>0002
+    <td>…
+    <td>…
+    <td>…
+    <td>0041
+    <td>0042
+    <td>　
+  <tr>
+    <td>　
+    <td>1
+    <td>0043
+    <td>0044
+    <td>0045
+    <td>…
+    <td>…
+    <td>…
+    <td>0084
+    <td>0085
+    <td>HEADER
+  <tr>
+    <td>　
+    <td>2
+    <td>0086
+    <td>0087
+    <td>0088
+    <td>…
+    <td>…
+    <td>…
+    <td>0127
+    <td>0128
+    <td>+
+  <tr>
+    <td>　
+    <td>　
+    <td><font color="#ff0000">P</font>
+    <td>　
+    <td>　
+    <td>　
+    <td><b><font color="#ff0000">Q</font></b>
+    <td>　
+    <td>　
+    <td>　
+    <td>用户数据
+  <tr>
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>＋
+  <tr>
+    <td>M<sub>P</sub>
+    <td>22
+    <td>0946
+    <td>0947
+    <td>0948
+    <td>…
+    <td>…
+    <td>…
+    <td>0987
+    <td>0988
+    <td>部分辅助数据
+  <tr>
+    <td>　
+    <td>23
+    <td>0989
+    <td>0990
+    <td>0991
+    <td>…
+    <td>…
+    <td>…
+    <td>1030
+    <td>1031
+    <td>　
+  <tr>
+    <td>　
+    <td>24
+    <td>1032
+    <td>1033
+    <td>1034
+    <td>　
+    <td>　
+    <td>　
+    <td>1073
+    <td>1074
+    <td>P-校验
+  <tr>
+    <td>　
+    <td>25
+    <td>1075
+    <td>1076
+    <td>1077
+    <td>…
+    <td>…
+    <td>…
+    <td>1116
+    <td>1117
+    <td>　
+  <tr>
+    <td>　
+    <td>26
+    <td>1118
+    <td>1119
+    <td>1120
+    <td>…
+    <td>1143
+    <td>　
+    <td>　
+    <td>　
+    <td>Q-校验
+  <tr>
+    <td>　
+    <td>27
+    <td>1144
+    <td>1145
+    <td>1146
+    <td>…
+    <td>1169
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+  <tr>
+    <td>　
+    <td>　
+    <td>0
+    <td>1
+    <td>2
+    <td>…
+    <td>25
+    <td>　
+    <td>　
+    <td>　
+    <td>
+      <p>(ISO /IEC1049)  
+</table>
+<p>矩阵中的元素是字。这个矩阵要把它想象成两个独立的矩阵才比较好理解和分析，
+<p>一个是由MSB字节组成的24×43矩阵，另一个是由LSB字节组成的24×43矩阵。
+<p><b>(1) P校验符号用(26，24)RS码产生</b>  
+<p>43列的每一列用矢量表示，记为<b>V<sub>p</sub></b>。每列有24个字节的数据再加2个字节的P校验字节，用下式表示：
+<table border="1" cellspacing="0">
+  <tr>
+    <td rowspan="10"><font><b>V<sub>p＝</sub></b></font>
+    <td>s(43*0+N<sub>p</sub>)
+  <tr>
+    <td>s(43*1+N<sub>p</sub>)
+  <tr>
+    <td>s(43*2+N<sub>p</sub>)
+  <tr>
+    <td>s(....)
+  <tr>
+    <td>s(43*M<sub>p</sub>+N<sub>p</sub>)
+  <tr>
+    <td>s(....)
+  <tr>
+    <td>s(43*22+N<sub>p</sub>)
+  <tr>
+    <td>s(43*23+N<sub>p</sub>)
+  <tr>
+    <td>s(43*24+N<sub>p</sub>)
+  <tr>
+    <td>s(43*25+N<sub>p</sub>)
+</table>
+<p>其中：N<sub>p</sub> = 0，1，2，……，42； <font>M<sub>p </sub></font>=  
+0，1，2，……，25
+<p><font>s(43*24+N<sub>p</sub>)</font>和<font>s(43*25+N<sub>p</sub>)</font>是P校验字节。对这列字节计算得到的是两个P校验字节，称为P校验符号。
+<p>两个P校验字节加到24行和25行的对应列上，这样构成了一个26×43的矩阵，并且满足方程<b>H<sub>P</sub></b>×<b>V<sub>p</sub></b>=0。
+<p>其中<b>H<sub>P</sub></b>校验矩阵为
+<table border="1" cellspacing="0">
+  <tr>
+    <td rowspan="2"><b>H<sub>P</sub></b>=
+    <td>1
+    <td>1
+    <td>......
+    <td>1
+    <td>1
+    <td>1
+  <tr>
+    <td>a<sup>25</sup>
+    <td>a<sup>24</sup>
+    <td>......
+    <td>a<sup>2</sup>
+    <td>a<sup>1</sup>
+    <td>1
+</table>
+<p><b>(2) Q校验符号用(45，43)RS码产生</b>  
+<p>增加P校验字节之后得到了一个26×43矩阵，该矩阵按对角线元素重新排列后得到一个新的矩阵：</p>
+<table cellspacing="1" border="1">
+  <tr>
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>M<sub>Q</sub>
+    <td>　
+    <td>　
+  <tr>
+    <td>　
+    <td>　
+    <td>0
+    <td>1
+    <td>2
+    <td>　
+    <td>　
+    <td>40
+    <td>41
+    <td>42
+    <td>Q<sub>0</sub>
+    <td>Q<sub>1</sub>
+  <tr>
+    <td>　
+    <td>0
+    <td>0000
+    <td>0044
+    <td>0088
+    <td>…
+    <td>…
+    <td>0642
+    <td>0686
+    <td>0730
+    <td>1118
+    <td>1144
+  <tr>
+    <td>　
+    <td>1
+    <td>0043
+    <td>0087
+    <td>0131
+    <td>…
+    <td>…
+    <td>0685
+    <td>0729
+    <td>0773
+    <td>1119
+    <td>1145
+  <tr>
+    <td>　
+    <td>2
+    <td>0086
+    <td>0130
+    <td>0147
+    <td>…
+    <td>…
+    <td>0728
+    <td>0772
+    <td>0816
+    <td>1120
+    <td>1146
+  <tr>
+    <td>　
+    <td>3
+    <td>0129
+    <td>0137
+    <td>0217
+    <td>…
+    <td>…
+    <td>0771
+    <td>0815
+    <td>0859
+    <td>1121
+    <td>1147
+  <tr>
+    <td>　
+    <td>4
+    <td>0172
+    <td>0216
+    <td>0260
+    <td>…
+    <td>…
+    <td>0814
+    <td>0858
+    <td>0902
+    <td>1122
+    <td>1148
+  <tr>
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+    <td>　
+  <tr>
+    <td>　
+    <td>22
+    <td>0946
+    <td>0990
+    <td>1034
+    <td>…
+    <td>…
+    <td>0470
+    <td>0514
+    <td>0558
+    <td>1140
+    <td>1166
+  <tr>
+    <td>N<sub>Q</sub>
+    <td>23
+    <td>0989
+    <td>1033
+    <td>1077
+    <td>…
+    <td>…
+    <td>0513
+    <td>0557
+    <td>0601
+    <td>1141
+    <td>1167
+  <tr>
+    <td>　
+    <td>24
+    <td>1032
+    <td>1076
+    <td>0002
+    <td>…
+    <td>…
+    <td>0556
+    <td>0600
+    <td>0644
+    <td>1142
+    <td>1168
+  <tr>
+    <td>　
+    <td>25
+    <td>1075
+    <td>0001
+    <td>0045
+    <td>…
+    <td>…
+    <td>0599
+    <td>0643
+    <td>0687
+    <td>1143
+    <td>1169
+</table>
+<p align="left">每条对角线上的43个MSB字节和LSB字节组成的矢量记为<b>V<sub>Q</sub></b>。<b>V<sub>Q</sub></b>在26×43矩阵中变成行矢量。</p>
+<p align="left">第N<sub>Q</sub>行上的<b>V<sub>Q</sub></b>矢量包含的字节如下：</p>
+<table border="1" cellspacing="0">
+  <tr>
+    <td rowspan="10"><b>V<sub>Q</sub> =</b>  
+    <td>s(44*0+43*N<sub>Q</sub>)
+  <tr>
+    <td><font>s(44*1+43*N<sub>Q</sub>)</font>
+  <tr>
+    <td><font>s(44*2+43*N<sub>Q</sub>)</font>
+  <tr>
+    <td>s(....)
+  <tr>
+    <td><font>s(44*M<sub>Q</sub>+43*N<sub>Q</sub>)</font>
+  <tr>
+    <td>s(....)
+  <tr>
+    <td><font>s(44*41+43*N<sub>Q</sub>)</font>
+  <tr>
+    <td><font>s(44*42+43*N<sub>Q</sub>)</font>
+  <tr>
+    <td><font>s(43*26+N<sub>Q</sub>)</font>
+  <tr>
+    <td><font>s(44*26+N<sub>Q</sub>)</font>
+</table>
+<p>其中：<font>N<sub>Q</sub></font> = 0，1，2，…，25；<font>M<sub>Q</sub></font>  
+= 0，1，2，…，42  
+<p><font>s(43*26+N<sub>Q</sub>)</font>和<font>s(44*26+N<sub>Q</sub>)</font>是Q校验字节。<b>V<sub>Q</sub></b>中的(44*<i>M<sub>Q</sub></i>＋43*<i>N<sub>Q</sub></i>)字节号运算结果要做mod(1118)运算。
+<p>用(45，43)RS码产生的两个Q校验字节放到对应<b>V<sub>Q</sub></b>矢量的末端，并且满足下面的方程：<b>H<sub>Q</sub></b>×<b>V<sub>Q</sub></b>＝0
+<p>其中<b>H<sub>Q</sub></b>校验矩阵为<font>
+<table border="1" cellspacing="0">
+  <tr>
+    <td rowspan="2"><b>H<sub>Q</sub></b>=
+    <td>1
+    <td>1
+    <td>......
+    <td>1
+    <td>1
+    <td>1
+  <tr>
+    <td>a<sup>44</sup>
+    <td>a<sup>43</sup>
+    <td>......
+    <td>a<sup>2</sup>
+    <td>a<sup>1</sup>
+    <td>1
+</table>
+</font>
+<p>(26，24)RS码和(45，43)RS码可以纠正出现在任何一行和任何一列上的一个错误，并且能相当可靠地
+<p>检测出行、列中的多重错误。如果在一个阵列中出现多重错误，Reference  
+Technology公司提供有一
+<p>种名叫Layered ECC的算法，它可以取消多重错误。它的核心思想是交替执行行纠错和列纠错。  
+<p align="left">ECC算法首先计算MSB矩阵和LSB矩阵中每一行的校正子<i>S<sub>r</sub></i>i(<i>i</i>
+= 0，1，…，25)，以及每一列的校正</p>  
+<p align="left">子<i>S<sub>cj</sub></i>(<i>j</i> = 0，1，…，44)。因为用(45，43)RS码，所以每一个<i>S<sub>ri</sub></i>和每一个<i>S<sub>cj</sub></i>都有两个校正子分量。</p>  
+<p align="left">如果<i>S<sub>ri</sub></i> = 0，则说明第<i>i</i>行无错；如S<i><sub>cj</sub></i>  
+= 0，说明第<i>j</i>行无错。</p>  
+<p>ECC算法首先纠正只有一个的错误的行。这些错误取消后就纠正只有一个的错误的<font>列</font>。经过一次行列交</p>
+<p>替纠错后，只剩下很少错误。再进行一次行列交替纠错后，就可以消除全部错误。</p>
+<p>因为RS码纠错算法本身包含找错误的位置和错误值，而错误位置已经由校正子<b>S<sub>r(i－k)</sub></b>、<b>S<sub>ri</sub></b>、<b>S<sub>r(i＋m)</sub></b></p>
+<p>和<b>S<sub>cj</sub></b>、<b>S<sub>c(j＋l)</sub></b>确定，所以只剩下求错误值的问题。这个问题在讨论RS码时已经解决。</p>
+<p>对CD-ROM存储器的数据，经CIRC校正后可以使以字节做单位的误码率小于10<sup>-9</sup>，再经RSPC进行纠错后，</p>
+<p>字节误码率可以小于10<sup>-13</sup>，这样就满足了计算机要求误码率小于10<sup>-12</sup>的要求。</p>
+<p>　</p>
+<p>对于Mode1 EDC计算范围是从#0字节开始到#2063字节共2064字节。  
+<p>对于Mode2 form1 EDC计算范围是从#16字节开始到#2071字节共2056字节。  
+<p>对于Mode2 form2 EDC计算范围是从#16字节开始到第2347字节共2332字节。  
+<p>ECC计算范围都是从#12字节开始到#2075字节共2064字节。
+<h5>程序：</h5>
+<pre>
+/* LUTs used for computing ECC/EDC */
+static BYTE ecc_f_lut[256];
+static BYTE ecc_b_lut[256];
+static DWORD edc_lut[256];
+
+/* Init routine */
+static void eccedc_init(void)
+{
+	DWORD i, j, edc;
+	for(i = 0; i &lt; 256; i++)
+	{
+		j = (i &lt;&lt; 1) ^ (i &amp; 0x80 ? 0x11D : 0);
+		ecc_f_lut[i] = j;
+		ecc_b_lut[i ^ j] = i;
+		edc = i;
+		for(j = 0; j &lt; 8; j++) edc = (edc &gt;&gt; 1) ^ (edc &amp; 1 ? 0xD8018001 : 0);
+		edc_lut[i] = edc;
+	}
+}
+/***************************************************************************/
+// Compute EDC for a block
+void edc_computeblock( const BYTE *src, WORD size, DWORD *dest )
+{
+	DWORD edc=0x00000000;
+	while(size--) edc = (edc &gt;&gt; 8) ^ edc_lut[(edc ^ (*src++)) &amp; 0xFF];
+	dest[0] = (edc &gt;&gt;  0) &amp; 0xFF;
+	dest[1] = (edc &gt;&gt;  8) &amp; 0xFF;
+	dest[2] = (edc &gt;&gt; 16) &amp; 0xFF;
+	dest[3] = (edc &gt;&gt; 24) &amp; 0xFF;
+}
+
+/***************************************************************************/
+// Compute ECC for a block (can do either P or Q)
+static void ecc_computeblock( BYTE *src, DWORD major_count, DWORD minor_count, DWORD major_mult, DWORD minor_inc, BYTE *dest)
+{
+	DWORD size = major_count * minor_count;
+	DWORD major, minor;
+	for(major = 0; major &lt; major_count; major++)
+	{
+		DWORD index = (major &gt;&gt; 1) * major_mult + (major &amp; 1);
+		BYTE ecc_a = 0;
+		BYTE ecc_b = 0;
+		for(minor = 0; minor &lt; minor_count; minor++)
+		{
+			BYTE temp = src[index];
+			index += minor_inc;
+			if(index &gt;= size) index -= size;
+			ecc_a ^= temp;
+			ecc_b ^= temp;
+			ecc_a = ecc_f_lut[ecc_a];
+		}
+		ecc_a = ecc_b_lut[ecc_f_lut[ecc_a] ^ ecc_b];
+		dest[major              ] = ecc_a;
+		dest[major + major_count] = ecc_a ^ ecc_b;
+	}
+}
+
+// Generate ECC P and Q codes for a block
+static void ecc_generate( BYTE *sector, int zeroaddress)
+{
+	BYTE address[4], i;
+	/* Save the address and zero it out */
+	if(zeroaddress) for(i = 0; i &lt; 4; i++)
+	{
+		address[i] = sector[12 + i];
+		sector[12 + i] = 0;
+	}
+	/* Compute ECC P code */
+	ecc_computeblock(sector + 0xC, 86, 24,  2, 86, sector + 0x81C);
+	/* Compute ECC Q code */
+	ecc_computeblock(sector + 0xC, 52, 43, 86, 88, sector + 0x8C8);
+	/* Restore the address */
+	if(zeroaddress) for(i = 0; i &lt; 4; i++) sector[12 + i] = address[i];
+}
+
+/***************************************************************************/
+// Generate ECC/EDC information for a sector (must be 2352 = 0x930 bytes), Returns 0 on success
+void eccedc_generate(BYTE *sector, int type)
+{
+	DWORD i;
+	switch(type) {
+	case 1: /* Mode 1 */
+		edc_computeblock(sector + 0x00, 0x810, sector + 0x810);
+		/* Write out zero bytes */
+		for(i = 0; i &lt; 8; i++) sector[0x814 + i] = 0;
+		ecc_generate(sector, 0);
+		break;
+	case 2: /* Mode 2 form 1 */
+		edc_computeblock(sector + 0x10, 0x808, sector + 0x818);
+		ecc_generate(sector, 1);
+		break;
+	case 3: /* Mode 2 form 2 */
+		edc_computeblock(sector + 0x10, 0x91C, sector + 0x92C);
+		break;
+  }
+}
+</pre>
+</font>

@@ -1,0 +1,215 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=gb2312">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<title>动画解码器</title>
+</head>
+
+<body>
+
+<h1><font color="#FF0000">动画解码器（MDEC)</font></h1>
+<p>动画解码器（MDEC）是一个特殊的控制芯片，把类似于JPEG的压缩图像解压到24位位图给GPU显示。MDEC一次只能解压16×16象素的24位图像，叫做“巨块”。这些巨块使用YUV（YCbCr）颜色表和离散余弦变换和行程压缩来编码。MDEC也为GPU执行24位到16位的颜色转换，由于解压速度非常高，解压后的RGB位图可以联合成一个大图片，如果显示是按顺序的，就可以产生动画。最大速度大概是每秒9000个巨块，这就可以以每秒30帧的速度播放320×240的动画。DMEC数据可以通过第0和第1个DMA通道来发送接收，DMA通道0是输入已解压的数据，通道1接收已解压的巨块。MDEC通过MDEC控制寄存器0x1F80_1820来控制，也可以用MDEC状态寄存器0x1F80_1824来检查状态。
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="5">0x1F80_1820(mdec0)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 写 
+  <tr>
+    <td>31&nbsp;&nbsp; 28 
+    <td>27
+    <td>26
+    <td>25
+    <td>24&nbsp;&nbsp; 0 
+  <tr>
+    <td>u
+    <td>RGB24
+    <td>u
+    <td>STP
+    <td>u
+</table>
+<p>注：一个str文件中每个数据段的第一个字都是控制字，用来写入到这个寄存器。
+<table border="1" cellspacing="0">
+  <tr>
+    <td>u
+    <td>未知
+  <tr>
+    <td>RGB24
+    <td>0 24位色<br> 
+      1 16位色 
+  <tr>
+    <td>STP
+    <td>切换是否设置解压数据的第15位（半透明）
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="8">0x1F80_1824(mdec1)&nbsp;&nbsp;&nbsp;&nbsp; 读 
+  <tr>
+    <td>31&nbsp;&nbsp; 30 
+    <td>29
+    <td>28&nbsp;&nbsp; 27 
+    <td>26
+    <td>25
+    <td>24
+    <td>23
+    <td>22&nbsp;&nbsp;&nbsp; 0 
+  <tr>
+    <td>FIFO
+    <td>InSync
+    <td>DREQ
+    <td>u
+    <td>RGB24
+    <td>OutSync
+    <td>STP
+    <td>u
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>u
+    <td>未知
+  <tr>
+    <td>FIFO
+    <td>先入先出缓存状态
+  <tr>
+    <td>InSync
+    <td>MDEC忙于解压数据
+  <tr>
+    <td>OutSync
+    <td>MDEC忙于传送数据到主存
+  <tr>
+    <td>DREQ
+    <td>数据请求
+  <tr>
+    <td>RGB24
+    <td>0 24位颜色<br> 
+      1 16位颜色 
+  <tr>
+    <td>STP
+    <td>切换是否设置解压数据的第15位（半透明）
+</table>
+<p>　
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="2">0x1F80_1824(mdec1)&nbsp;&nbsp;&nbsp;&nbsp; 写 
+  <tr>
+    <td>31
+    <td>30&nbsp;&nbsp;&nbsp; 0 
+  <tr>
+    <td>reset
+    <td>u
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>u
+    <td>未知
+  <tr>
+    <td>reset
+    <td>复位MDEC
+</table>
+<p>　
+<h3>MDEC数据格式</h3>
+<p>MDEC使用一种类似于JPEG的“有损”图片格式。一个典型的图片，用DMA放到MDEC前，是如下格式
+<table border="1" cellspacing="0">
+  <tr>
+    <td>头部
+  <tr>
+    <td>巨块
+  <tr>
+    <td>...
+  <tr>
+    <td>巨块
+  <tr>
+    <td>尾部
+</table>
+<p>头部是32位字长
+<table border="1" cellspacing="0">
+  <tr>
+    <td>31&nbsp;&nbsp; 16 
+    <td>15&nbsp;&nbsp;&nbsp; 0 
+  <tr>
+    <td>0x3800
+    <td>size
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>0x3800
+    <td>数据ID
+  <tr>
+    <td>size
+    <td>头部后的数据大小
+</table>
+<p>巨块可以分解为
+<table border="1" cellspacing="0">
+  <tr>
+    <td>Cb块
+  <tr>
+    <td>Cr块
+  <tr>
+    <td>Y0块
+  <tr>
+    <td>Y1块
+  <tr>
+    <td>Y2块
+  <tr>
+    <td>Y3块
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>Cb，Cr
+    <td>颜色差块
+  <tr>
+    <td>Y0，Y1，Y2，Y3
+    <td>发光块
+</table>
+<p>在每个块中储存了DCT信息和RLE压缩
+<table border="1" cellspacing="0">
+  <tr>
+    <td>15&nbsp;&nbsp;&nbsp; 0 
+  <tr>
+    <td>DCT
+  <tr>
+    <td>RLE
+  <tr>
+    <td>...
+  <tr>
+    <td>RLE
+  <tr>
+    <td>EOD
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="2">DCT&nbsp;  
+      DCT数据，包含了量化因子和直流（DC）参考
+  <tr>
+    <td>15&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  
+      10
+    <td>9&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  
+      0
+  <tr>
+    <td>Q－量化因子（6位无符号）
+    <td>DC－直流参考（10位带符号）
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td colspan="2">RLE&nbsp; 行程压缩数据 
+  <tr>
+    <td>15&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  
+      10
+    <td>9&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  
+      0
+  <tr>
+    <td>LENGTH－长度数据之间的0数目（6位无符号）
+    <td>DATA－数据（10位带符号）
+</table>
+<table border="1" cellspacing="0">
+  <tr>
+    <td>EOD&nbsp;&nbsp; 数据结束 
+  <tr>
+    <td>15&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0 
+  <tr>
+    <td>0xFE00－使MDEC知道一个块已经结束
+</table>
+
+</body>
+
+</html>
