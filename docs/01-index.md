@@ -1,5 +1,6 @@
 ---
 title: 欢迎
+hide_comment: true
 ---
 
 # 欢迎！

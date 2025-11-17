@@ -5,6 +5,8 @@ import AuthorCard from '@site/src/components/AuthorCard';
 
 <AuthorCard authors={['半个水果']} />
 
+## 基本语法
+
 如标题，加粗，链接等基本语法可以看下面的文档，这里不再赘述。
 
 [Markdown 基本语法](https://markdown.com.cn/basic-syntax)

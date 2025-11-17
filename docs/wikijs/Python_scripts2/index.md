@@ -142,9 +142,7 @@ root.mainloop()
 
 视频讲解：[读取二进制数据，自制脚本提取图片](https://www.bilibili.com/video/BV1dU22YUE6X)
 
-`ddsextract.py`
-
-```Python showLineNumbers
+```Python title='ddsextract.py' showLineNumbers
 import os
 
 def extract_dds_content(file_path, directory_path, start_sequence, end_sequence):
@@ -200,9 +198,7 @@ if __name__ == "__main__":
     main()
 ```
 
-`jpgextract.py`
-
-```Python showLineNumbers
+```Python title='jpgextract.py' showLineNumbers
 import os
 
 def is_valid_jpg(data):
@@ -275,9 +271,7 @@ if __name__ == "__main__":
     main()
 ```
 
-`pngextract.py`
-
-```Python showLineNumbers
+```Python title='pngextract.py' showLineNumbers
 import os
 import struct
 
@@ -324,9 +318,7 @@ if __name__ == "__main__":
     main()
 ```
 
-`webpextract.py`
-
-```Python showLineNumbers
+```Python title='webpextract.py' showLineNumbers
 import os
 import struct
 
@@ -393,9 +385,7 @@ if __name__ == "__main__":
 
 ![](wn_2.jpg)
 
-`万能二进制提取.py`
-
-```Python showLineNumbers
+```Python title='万能二进制提取.py' showLineNumbers
 import os
 import sys
 

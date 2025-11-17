@@ -37,5 +37,20 @@ export const authors = {
   title: "翻译",
   image_url: "/Gametoolkit/img/Unknow_authors.jpg",
   },
+  YZB: {
+  name: "YZB",
+  title: "文章编者",
+  image_url: "/Gametoolkit/img/Unknow_authors.jpg",
+  },
+  施柯昱: {
+  name: "施柯昱",
+  title: "作者",
+  image_url: "/Gametoolkit/img/Unknow_authors.jpg",
+  },
+  梁文豪: {
+  name: "梁文豪",
+  title: "电子书制作",
+  image_url: "/Gametoolkit/img/Unknow_authors.jpg",
+  },
 };
     
