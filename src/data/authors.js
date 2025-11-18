@@ -52,5 +52,15 @@ export const authors = {
   title: "电子书制作",
   image_url: "/Gametoolkit/img/Unknow_authors.jpg",
   },
+  中国宋庄: {
+    name: "中国宋庄",
+    title: "老男人一个。",
+    url: "https://space.bilibili.com/247898473",
+    bio: "这里的作者信息不会自动更新",
+    image_url: "/Gametoolkit/img/ac03e52373a1ab791dfb5fed1b679d032f0721f0.jpg",
+    social: {
+        bilibili: 'https://space.bilibili.com/247898473',
+    },
+  },
 };
     
