@@ -28,3 +28,8 @@
 > 同时Github的仓库具有不稳定性，不知道什么时候会消失。Also Github repositories are volatile and there is no telling when they will disappear.
 >
 > 请保存文件，同时不要拿去贩卖。Please save the files and at the same time do not take it for sale.
+             
+## 星标概览
+[![Stargazers over time](https://starchart.cc/Little-Data/Gametoolkit.svg?variant=adaptive)](https://starchart.cc/Little-Data/Gametoolkit)
+
+                    
