@@ -4,6 +4,8 @@
 
 ### 十分建议查看本仓库[文档页](https://little-data.github.io/Gametoolkit)，转到文档页查看更多
 
+### 如果 fork 该仓库，那么只是 fork 了文档，相关软件之类的文件 >>并没有<< 保存到 fork 的仓库中！
+
 > 文件贡献伙伴 Contributorship：
 > 
 > https://github.com/595554963github
