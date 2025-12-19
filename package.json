@@ -5,7 +5,7 @@
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",
-    "build": "docusaurus build",
+    "build": "docusaurus build && node scripts/generate-docs-rss.js",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",
@@ -20,9 +20,13 @@
     "@mdx-js/react": "^3.1.1",
     "clsx": "^2.1.1",
     "docusaurus-plugin-zooming": "^1.0.0",
+    "fs-extra": "^11.3.3",
+    "glob": "^13.0.0",
+    "gray-matter": "^4.0.3",
     "prism-react-renderer": "^2.4.1",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "rss": "^1.2.2"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "3.9.2",

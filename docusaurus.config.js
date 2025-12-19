@@ -59,8 +59,9 @@ const config = {
           showReadingTime: true,
           showLastUpdateTime: true,
           feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
+            type: 'rss',
+            xslt: false,
+            limit: 15
           },
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
@@ -128,14 +129,21 @@ const config = {
               {
                 to: '/blog',
                 label:'主页',
-                id: 'blog1',
               },
               {
                 to: '/blog/archive',
                 label:'全部日志',
-                id: 'blog2',
+              },
+              {
+                href: 'https://little-data.github.io/Gametoolkit/blog/rss.xml',
+                label: '日志RSS订阅',
               },
             ],
+          },
+          {
+            href: 'https://little-data.github.io/Gametoolkit/docs/rss.xml',
+            label: '文档RSS订阅',
+            position: 'left',
           },
           {
             href: 'https://github.com/Little-Data/Gametoolkit',
