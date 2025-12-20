@@ -273,7 +273,16 @@ async function generateDocsRSS() {
     }
 
     // 按更新时间排序并截取最大数量
-    const sortedDocs = docsData.sort((a, b) => b.lastUpdatedAt - a.lastUpdatedAt);
+    // 时间相同时按文件路径排序，确保跨平台一致性
+    const sortedDocs = docsData.sort((a, b) => {
+      // 主要排序：按更新时间降序
+      const timeDiff = b.lastUpdatedAt - a.lastUpdatedAt;
+      if (timeDiff !== 0) {
+        return timeDiff;
+      }
+      // 次要排序：按文件路径升序
+      return a.file.localeCompare(b.file);
+    });
     const limitedDocs = sortedDocs.slice(0, SITE_CONFIG.maxItems);
 
     // 添加RSS条目
