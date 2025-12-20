@@ -24,6 +24,18 @@ const DOCS_SRC_DIR = path.join(__dirname, '../docs');
 const OUTPUT_PATH = path.join(__dirname, '../build/docs/rss.xml');
 
 /**
+ * 工具函数：将路径转换为POSIX风格的绝对路径（跨平台统一）
+ * @param {string} filePath 任意路径（相对/绝对、POSIX/Windows）
+ * @param {string} baseDir 基准目录（默认当前工作目录）
+ * @returns {string} POSIX风格的绝对路径（/分隔符）
+ */
+function toPosixAbsolutePath(filePath, baseDir = process.cwd()) {
+  // 先解析为系统原生的绝对路径，再转换为POSIX风格并规范化
+  const absolutePath = path.resolve(baseDir, filePath);
+  return path.posix.normalize(absolutePath.replace(/\\/g, '/'));
+}
+
+/**
  * 工具函数：移除字符串开头的数字-前缀（如 01-、123-）
  * @param {string} str 原始字符串（文件名或路径片段）
  * @returns {string} 处理后的字符串
@@ -55,36 +67,36 @@ function isPathExcluded(pathToCheck, excludePaths, baseDir = __dirname) {
     return false;
   }
 
-  // 统一路径格式：转为绝对路径，替换分隔符为/
-  const normalizedPath = path.resolve(baseDir, pathToCheck).replace(/\\/g, '/');
-  const normalizedBaseDir = path.resolve(baseDir).replace(/\\/g, '/');
+  // 转换为POSIX风格的绝对路径（跨平台统一）
+  const normalizedPath = toPosixAbsolutePath(pathToCheck, baseDir);
+  // 系统原生的基准目录（用于glob的cwd参数，确保IO操作正确）
+  const systemBaseDir = path.resolve(baseDir);
 
   // 遍历排除规则，判断是否匹配
   for (const excludePath of excludePaths) {
-    // 处理排除规则：转为绝对路径，支持glob通配符
-    const normalizedExcludePath = path.resolve(normalizedBaseDir, excludePath).replace(/\\/g, '/');
+    // 转换排除规则为POSIX风格的绝对路径
+    const normalizedExcludePath = toPosixAbsolutePath(excludePath, baseDir);
     
     // 情况1：排除规则是glob通配符
     if (glob.hasMagic(excludePath)) {
-      // 匹配所有符合规则的路径
+      // glob使用系统原生路径作为cwd，匹配后转换为POSIX绝对路径
       const matchedPaths = glob.sync(excludePath, { 
-        cwd: normalizedBaseDir, 
+        cwd: systemBaseDir, // 系统原生路径，确保Linux下glob能正确查找
         absolute: true,
         nodir: true // 只匹配文件（避免文件夹匹配）
-      }).map(p => p.replace(/\\/g, '/'));
-      // 检查当前路径是否在匹配结果中，或是否是匹配路径的父路径（处理根路径场景）
-      if (matchedPaths.includes(normalizedPath) || matchedPaths.some(p => normalizedPath.startsWith(p.replace(/[^/]+$/, '')))) {
+      }).map(p => toPosixAbsolutePath(p)); // 统一转换为POSIX风格路径
+
+      // 检查当前路径是否在匹配结果中，或是否是匹配路径的父路径
+      if (matchedPaths.includes(normalizedPath) || 
+          matchedPaths.some(p => normalizedPath.startsWith(p.replace(/[^/]+$/, '') + '/'))) {
         return true;
       }
     } 
     // 情况2：排除规则是普通路径（文件或文件夹）
     else {
-      // 检查当前路径是否是排除文件，或在排除文件夹下，或与排除路径完全匹配（处理后的路径）
+      // 检查当前路径是否是排除文件、在排除文件夹下，或路径完全匹配
       if (normalizedPath === normalizedExcludePath || 
-          normalizedPath.startsWith(normalizedExcludePath + '/') ||
-          // 支持匹配处理后的短路径（如docs）
-          path.basename(normalizedPath) === path.basename(normalizedExcludePath) && 
-          path.dirname(normalizedPath) === path.dirname(normalizedExcludePath)) {
+          normalizedPath.startsWith(normalizedExcludePath + '/')) {
         return true;
       }
     }
@@ -217,7 +229,8 @@ async function generateDocsRSS() {
       cleanRelativePath = removeTrailingIndex(cleanRelativePath);
 
       // 第二步：过滤处理后的路径（包括根路径如docs）
-      const processedRelativePath = `docs/${cleanRelativePath}`.replace(/\/$/, ''); // 拼接docs前缀，移除末尾/
+      // 使用path.posix.join拼接路径，避免手动拼接的分隔符问题
+      const processedRelativePath = path.posix.join('docs', cleanRelativePath).replace(/\/$/, '');
       if (isPathExcluded(processedRelativePath, SITE_CONFIG.excludePaths, DOCS_SRC_DIR) || processedPaths.has(processedRelativePath)) {
         continue;
       }
