@@ -20,10 +20,10 @@ const config = {
   },
 
   // Set the production url of your site here
-  url: 'https://little-data.github.io/',
+  url: 'https://gametoolkit.little-data.top',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/Gametoolkit/',
+  baseUrl: '/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -135,13 +135,13 @@ const config = {
                 label:'全部日志',
               },
               {
-                href: 'https://little-data.github.io/Gametoolkit/blog/rss.xml',
+                href: 'https://gametoolkit.little-data.top/blog/rss.xml',
                 label: '日志RSS订阅',
               },
             ],
           },
           {
-            href: 'https://little-data.github.io/Gametoolkit/docs/rss.xml',
+            href: 'https://gametoolkit.little-data.top/docs/rss.xml',
             label: '文档RSS订阅',
             position: 'left',
           },
