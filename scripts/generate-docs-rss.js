@@ -7,8 +7,8 @@ const { execSync } = require('child_process');
 
 // 站点配置
 const SITE_CONFIG = {
-  url: 'https://little-data.github.io/',
-  baseUrl: '/Gametoolkit',
+  url: 'https://gametoolkit.little-data.top',
+  baseUrl: '/',
   title: 'Gametoolkit - 文档 RSS',
   description: 'Gametoolkit - 文档 RSS',
   language: 'zh-Hans',

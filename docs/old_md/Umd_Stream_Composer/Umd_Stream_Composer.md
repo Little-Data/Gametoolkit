@@ -23,4 +23,4 @@ import AuthorCard from '@site/src/components/AuthorCard';
 
 * 打开`UmdStreamComposer.exe`出现需要安装`DirectPlay`，可以跳过不装
 
-具体操作可看[生成PSP专用PMF格式视频文件](/Gametoolkit/docs/old_md/Generate_PMF_format_for_PSP)
+具体操作可看[生成PSP专用PMF格式视频文件](/docs/old_md/Generate_PMF_format_for_PSP)
