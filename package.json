@@ -20,7 +20,6 @@
     "@giscus/react": "^3.1.0",
     "@mdx-js/react": "^3.1.1",
     "clsx": "^2.1.1",
-    "docusaurus-plugin-zooming": "^1.0.0",
     "fs-extra": "^11.3.5",
     "glob": "^13.0.6",
     "gray-matter": "^4.0.3",

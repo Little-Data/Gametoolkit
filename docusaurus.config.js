@@ -41,7 +41,7 @@ const config = {
     locales: ['zh-Hans'],
   },
   plugins: [
-    'docusaurus-plugin-zooming'
+    './plugins/image-viewer',
   ],
   presets: [
     [
@@ -50,8 +50,6 @@ const config = {
       ({
         docs: {
           sidebarPath: './sidebars.js',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
           showLastUpdateTime: true,
         },
         blog: {
@@ -63,9 +61,6 @@ const config = {
             xslt: false,
             limit: 15
           },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
           onUntruncatedBlogPosts: 'warn',
@@ -83,6 +78,14 @@ const config = {
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
+      imageViewer: {
+        scale: 1.8,
+        enableWheelZoom: true,
+        containerSelector: 'article',
+        minScale: 0.5,
+        maxScale: Infinity,
+        wheelStep: 0.25,
+      },
       announcementBar: {
         id: 'follow_me',
         content: '⭐️ 如果这个网站能帮助到你，欢迎关注！  <a target="_blank" rel="noopener noreferrer" href="https://github.com/little-Data">GitHub</a>  |  <a target="_blank" rel="noopener noreferrer" href="https://space.bilibili.com/357695126">Bilibili</a>',
