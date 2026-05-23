@@ -8,6 +8,7 @@ module.exports = function (context, options) {
     minScale: options.minScale ?? themeConfig.minScale ?? 0.5,
     maxScale: options.maxScale ?? themeConfig.maxScale ?? 5,
     wheelStep: options.wheelStep ?? themeConfig.wheelStep ?? 0.25,
+    excludeSelector: options.excludeSelector ?? themeConfig.excludeSelector ?? null,
   };
 
   function safeStringify(obj) {
@@ -19,12 +20,11 @@ module.exports = function (context, options) {
   }
 
   return {
-    name: 'docusaurus-plugin-image-viewer',
-
+    name: 'image-viewer',
     getClientModules() {
       return [require.resolve('./client')];
     },
-
+    
     injectHtmlTags() {
       return {
         headTags: [

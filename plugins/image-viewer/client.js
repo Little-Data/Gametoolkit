@@ -8,6 +8,7 @@ if (typeof window !== 'undefined') {
   const MIN_SCALE = config.minScale ?? 0.5;
   const MAX_SCALE = config.maxScale ?? 5;
   const WHEEL_STEP = config.wheelStep ?? 0.25;
+  const EXCLUDE_SELECTOR = config.excludeSelector || null;
 
   // ---------- 全局变量 ----------
   let currentImageElement = null;
@@ -22,6 +23,50 @@ if (typeof window !== 'undefined') {
   let closeTimeout = null;
   let isAnimating = false;
   let isClosing = false;
+  let shouldExclude = null;
+
+  if (EXCLUDE_SELECTOR) {
+    let rawSelectors = [];
+    if (Array.isArray(EXCLUDE_SELECTOR)) {
+      rawSelectors = EXCLUDE_SELECTOR;
+    } else if (typeof EXCLUDE_SELECTOR === 'string') {
+      rawSelectors = EXCLUDE_SELECTOR.split(',').map(s => s.trim()).filter(s => s);
+    } else {
+      rawSelectors = [String(EXCLUDE_SELECTOR)];
+    }
+    
+    shouldExclude = (img) => {
+      return rawSelectors.some(sel => {
+        try {
+          return img.matches(sel) || img.closest(sel);
+        } catch (e) {
+          return false;
+        }
+      });
+    };
+  } else {
+    shouldExclude = () => false;
+  }
+
+  // 三击检测相关
+  let lastTaps = []; // 存储最近触摸的时间与坐标
+  const TRIPLE_TAP_MAX_TIME = 350;      // 最大时间间隔（毫秒）
+  const TRIPLE_TAP_MAX_DISTANCE = 20;   // 最大位置漂移（像素）
+
+  // 触摸专用状态
+  let touchState = {
+    active: false,
+    isPinching: false,
+    startDistance: 0,
+    startCenterX: 0,
+    startCenterY: 0,
+    startScale: 1,
+    startTranslateX: 0,
+    startTranslateY: 0,
+    lastDistance: 0,
+    lastCenterX: 0,
+    lastCenterY: 0,
+  };
 
   // 记录原始 body overflow 值，用于恢复
   let originalBodyOverflow = '';
@@ -38,7 +83,9 @@ if (typeof window !== 'undefined') {
     const containers = document.querySelectorAll(CONTAINER_SELECTOR);
     containers.forEach(container => {
       container.querySelectorAll('img').forEach(img => {
-        img.classList.add('image-viewer-zoomable');
+        if (!shouldExclude(img)) {
+          img.classList.add('image-viewer-zoomable');
+        }
       });
     });
   }
@@ -50,15 +97,17 @@ if (typeof window !== 'undefined') {
         mutation.addedNodes.forEach(node => {
           if (node.nodeType === 1) {
             if (node.matches?.(CONTAINER_SELECTOR)) {
-              node.querySelectorAll('img').forEach(img => img.classList.add('image-viewer-zoomable'));
+              node.querySelectorAll('img').forEach(img => {
+                if (!shouldExclude(img)) img.classList.add('image-viewer-zoomable');
+              });
             }
             if (node.matches?.('img') && node.closest(CONTAINER_SELECTOR)) {
-              node.classList.add('image-viewer-zoomable');
+              if (!shouldExclude(node)) node.classList.add('image-viewer-zoomable');
             }
             if (node.querySelectorAll) {
               const imgs = node.querySelectorAll('img');
               imgs.forEach(img => {
-                if (img.closest(CONTAINER_SELECTOR)) {
+                if (img.closest(CONTAINER_SELECTOR) && !shouldExclude(img)) {
                   img.classList.add('image-viewer-zoomable');
                 }
               });
@@ -93,6 +142,7 @@ if (typeof window !== 'undefined') {
   function handleImageClick(e) {
     const img = e.target;
     if (img.tagName !== 'IMG') return;
+    if (shouldExclude(img)) return;
     if (!img.classList.contains('image-viewer-zoomable') && !img.closest(CONTAINER_SELECTOR)) return;
     if (isAnimating || isClosing) return;
 
@@ -136,11 +186,156 @@ if (typeof window !== 'undefined') {
     btn.className = 'image-viewer-close';
     btn.setAttribute('aria-label', '关闭');
     btn.setAttribute('title', '关闭图片预览');
+    
+    // 鼠标点击
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!isAnimating && !isClosing) closeViewer();
     });
+    
+    // 触摸点击
+    btn.addEventListener('touchstart', (e) => {
+      e.stopPropagation();
+      e.preventDefault();  // 避免触发容器上的滚动/缩放
+      if (!isAnimating && !isClosing) closeViewer();
+    }, { passive: false });
+    
     return btn;
+  }
+
+  // 计算两点间的距离
+  function getDistance(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
+  }
+
+  // 计算两点中心
+  function getCenter(touches) {
+    return {
+      x: (touches[0].clientX + touches[1].clientX) / 2,
+      y: (touches[0].clientY + touches[1].clientY) / 2
+    };
+  }
+
+  // 触摸开始
+  function onTouchStart(e) {
+    // 如果触摸目标是关闭按钮或其内部，不处理图片拖拽缩放
+    let target = e.target;
+    while (target && target !== viewerContainer) {
+      if (target === closeButton) return;
+      target = target.parentNode;
+    }
+
+    if (!viewerImg || isAnimating || isClosing) return;
+
+    // ---------- 单指快速点击三次检测 ----------
+    if (e.touches.length === 1) {
+      const now = Date.now();
+      const x = e.touches[0].clientX;
+      const y = e.touches[0].clientY;
+
+      // 过滤掉超时或偏移过大的触摸记录
+      lastTaps = lastTaps.filter(tap => {
+        const dt = now - tap.time;
+        if (dt > TRIPLE_TAP_MAX_TIME) return false;
+        const dx = Math.abs(tap.x - x);
+        const dy = Math.abs(tap.y - y);
+        return dx <= TRIPLE_TAP_MAX_DISTANCE && dy <= TRIPLE_TAP_MAX_DISTANCE;
+      });
+
+      // 加入当前触摸
+      lastTaps.push({ time: now, x, y });
+
+      // 如果连续三次满足条件，关闭预览
+      if (lastTaps.length >= 3) {
+        e.preventDefault();
+        closeViewer();
+        return; // 不再执行拖拽/缩放逻辑
+      }
+    } else {
+      // 双指或多指时清空三击记录，避免干扰
+      lastTaps = [];
+    }
+
+    e.preventDefault();
+
+    const touches = e.touches;
+    if (touches.length === 1) {
+      // 单指拖拽
+      touchState.active = true;
+      touchState.isPinching = false;
+      dragStartX = touches[0].clientX;
+      dragStartY = touches[0].clientY;
+      startTranslateX = translateX;
+      startTranslateY = translateY;
+      isDragging = true;
+      if (viewerImg) viewerImg.style.cursor = 'grabbing';
+    } else if (touches.length === 2) {
+      // 双指缩放
+      touchState.active = true;
+      touchState.isPinching = true;
+      touchState.startDistance = getDistance(touches);
+      const center = getCenter(touches);
+      touchState.startCenterX = center.x;
+      touchState.startCenterY = center.y;
+      touchState.startScale = scale;
+      touchState.startTranslateX = translateX;
+      touchState.startTranslateY = translateY;
+      touchState.lastDistance = touchState.startDistance;
+      touchState.lastCenterX = touchState.startCenterX;
+      touchState.lastCenterY = touchState.startCenterY;
+      if (isDragging) isDragging = false;
+    }
+  }
+
+  function onTouchMove(e) {
+    if (!viewerImg || isAnimating || isClosing) return;
+    e.preventDefault();
+
+    const touches = e.touches;
+    if (touchState.isPinching && touches.length === 2) {
+      const currentDistance = getDistance(touches);
+      const currentCenter = getCenter(touches);
+      // 计算相对缩放因子
+      const factor = currentDistance / touchState.lastDistance;
+      if (factor !== 1) {
+        // 使用 zoomAt 以当前双指中心进行相对缩放
+        zoomAt(currentCenter.x, currentCenter.y, factor);
+        // 更新状态以便下一次增量计算
+        touchState.lastDistance = currentDistance;
+        touchState.lastCenterX = currentCenter.x;
+        touchState.lastCenterY = currentCenter.y;
+      }
+    } else if (!touchState.isPinching && touches.length === 1 && isDragging) {
+      // 单指拖拽
+      translateX = startTranslateX + (touches[0].clientX - dragStartX);
+      translateY = startTranslateY + (touches[0].clientY - dragStartY);
+      updateTransform();
+    }
+  }
+
+  function onTouchEnd(e) {
+    if (!viewerImg) return;
+    e.preventDefault();
+
+    // 重置所有触摸状态
+    touchState.active = false;
+    touchState.isPinching = false;
+    isDragging = false;
+    if (viewerImg) viewerImg.style.cursor = 'grab';
+
+    // 如果还有残留的触摸点但数量不对，保证清理干净
+    if (e.touches.length === 0) {
+      // 完全结束
+    }
+  }
+
+  // 阻止触摸取消时的默认行为
+  function onTouchCancel(e) {
+    if (!viewerImg) return;
+    e.preventDefault();
+    onTouchEnd(e);
   }
 
   function openViewer(src, originalImg) {
@@ -180,6 +375,12 @@ if (typeof window !== 'undefined') {
     viewerImg.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+
+    // 添加触摸事件监听
+    viewerContainer.addEventListener('touchstart', onTouchStart, { passive: false });
+    viewerContainer.addEventListener('touchmove', onTouchMove, { passive: false });
+    viewerContainer.addEventListener('touchend', onTouchEnd);
+    viewerContainer.addEventListener('touchcancel', onTouchCancel);
 
     document.body.appendChild(viewerContainer);
 
@@ -340,6 +541,13 @@ if (typeof window !== 'undefined') {
     viewerImg?.removeEventListener('mousedown', handleMouseDown);
     window.removeEventListener('mousemove', handleMouseMove);
     window.removeEventListener('mouseup', handleMouseUp);
+
+    // 移除触摸事件监听
+    viewerContainer.removeEventListener('touchstart', onTouchStart);
+    viewerContainer.removeEventListener('touchmove', onTouchMove);
+    viewerContainer.removeEventListener('touchend', onTouchEnd);
+    viewerContainer.removeEventListener('touchcancel', onTouchCancel);
+
     if (closeButton) {
       closeButton.removeEventListener('click', closeViewer);
       closeButton = null;
@@ -360,6 +568,22 @@ if (typeof window !== 'undefined') {
       document.body.style.overflow = originalBodyOverflow;
       originalBodyOverflow = '';
     }
+
+    // 重置触摸状态
+    touchState = {
+      active: false,
+      isPinching: false,
+      startDistance: 0,
+      startCenterX: 0,
+      startCenterY: 0,
+      startScale: 1,
+      startTranslateX: 0,
+      startTranslateY: 0,
+      lastDistance: 0,
+      lastCenterX: 0,
+      lastCenterY: 0,
+    };
+    lastTaps = [];
   }
 
   /**

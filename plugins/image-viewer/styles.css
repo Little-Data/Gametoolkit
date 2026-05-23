@@ -14,6 +14,7 @@
   cursor: zoom-out;
   opacity: 0;
   transition: opacity 0.3s ease;
+  touch-action: none;
 }
 
 [data-theme='light'] .image-viewer-overlay {
