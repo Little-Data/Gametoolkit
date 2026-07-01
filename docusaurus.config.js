@@ -42,6 +42,7 @@ const config = {
   },
   plugins: [
     './plugins/image-viewer',
+    './plugins/toc-mobile'
   ],
   presets: [
     [
