@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
+    "cleanbuildServe": "yarn clear && yarn build && yarn serve --host 0.0.0.0",
     "docusaurus": "docusaurus",
     "start": "docusaurus start",
     "build": "docusaurus build && node scripts/generate-docs-rss.js",
