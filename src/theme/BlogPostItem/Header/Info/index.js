@@ -34,6 +34,9 @@ function DateTime({date, formattedDate}) {
 function Spacer() {
   return <>{' · '}</>;
 }
+
+const SHANGHAI_OFFSET = 8 * 60 * 60 * 1000;
+
 export default function BlogPostItemHeaderInfo({className}) {
   const {metadata} = useBlogPost();
   const {date, readingTime} = metadata;
@@ -45,7 +48,10 @@ export default function BlogPostItemHeaderInfo({className}) {
     minute: '2-digit',
     timeZone: 'Asia/Shanghai',
   });
-  const formatDate = (blogDate) => dateTimeFormat.format(new Date(blogDate));
+  const formatDate = (blogDate) => {
+    const adjusted = new Date(new Date(blogDate).getTime() - SHANGHAI_OFFSET);
+    return dateTimeFormat.format(adjusted);
+  };
   return (
     <div className={clsx(styles.container, 'margin-vert--md', className)}>
       <DateTime date={date} formattedDate={formatDate(date)} />
