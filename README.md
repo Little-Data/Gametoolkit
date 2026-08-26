@@ -32,6 +32,12 @@
 > 请保存文件，同时不要拿去贩卖。Please save the files and at the same time do not take it for sale.
              
 ## 星标概览
-[![Stargazers over time](https://starchart.cc/Little-Data/Gametoolkit.svg?variant=adaptive)](https://starchart.cc/Little-Data/Gametoolkit)
 
+<a href="https://star-history.dera.page/#Little-Data/Gametoolkit">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=Little-Data/Gametoolkit&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=Little-Data/Gametoolkit" />
+   <img alt="Star History Chart" src="https://star-history.dera.page/svg?repos=Little-Data/Gametoolkit" />
+ </picture>
+</a>
                     
