@@ -62,5 +62,20 @@ export const authors = {
         bilibili: 'https://space.bilibili.com/247898473',
     },
   },
+  海宁: {
+    name: "海宁",
+    title: "作者",
+    image_url: "/img/Unknow_authors.jpg",
+  },
+  魔法皇子: {
+    name: "魔法皇子",
+    title: "作者",
+    image_url: "/img/Unknow_authors.jpg",
+  },
+  zxp: {
+    name: "zxp",
+    title: "作者",
+    image_url: "/img/Unknow_authors.jpg",
+  },
 };
     
